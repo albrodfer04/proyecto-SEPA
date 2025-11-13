@@ -1,50 +1,34 @@
-/*
- * main.c
- */
-
+// =======================================================================
+// Pines utilizados:
+// PG1 --> PWM Rojo (PWM_OUT_5)
+// PK4 --> PWM Verde (PWM_OUT_6)
+// PK5 --> PWM Azul (PWM_OUT_7)
+// =======================================================================
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <math.h>
-
+//#include <stdio.h>
 
 #include "driverlib2.h"
 #include "utils/uartstdio.h"
 
-#include "HAL_I2C.h"
-#include "sensorlib2.h"
-
-#include "FT800_TIVA.h"
 int RELOJ;
-int Dutymax=255;
-int Dutymin=0;
+int Dutymax = 255;
+int Dutymin = 0;
+
 void led(int DutyRojo, int DutyVerde, int DutyAzul);
+void led_Inicializar_Pines(void);
+
 int main(void) {
+    // Configura reloj a 120 MHz con PLL
     RELOJ = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ | SYSCTL_OSC_MAIN | SYSCTL_USE_PLL | SYSCTL_CFG_VCO_480), 120000000);
-    int PeriodoPWM = 255;
 
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM0);
-    PWMClockSet(PWM0_BASE, PWM_SYSCLK_DIV_4);
-
-    GPIOPinConfigure(GPIO_PF1_M0PWM1);
-    GPIOPinConfigure(GPIO_PF2_M0PWM2);
-    GPIOPinConfigure(GPIO_PF3_M0PWM3);
-    GPIOPinTypePWM(GPIO_PORTF_BASE, GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3);
-
-    // Generador 0 para Rojo
-    PWMGenConfigure(PWM0_BASE, PWM_GEN_0, PWM_GEN_MODE_DOWN);
-    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_0, PeriodoPWM);
-    PWMGenEnable(PWM0_BASE, PWM_GEN_0);
-
-    // Generador 1 para Verde y Azul
-    PWMGenConfigure(PWM0_BASE, PWM_GEN_1, PWM_GEN_MODE_DOWN);
-    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_1, PeriodoPWM);
-    PWMGenEnable(PWM0_BASE, PWM_GEN_1);
+    // Inicializa PWM y pines
+    led_Inicializar_Pines();
 
     int DutyRojo = 1, DutyVerde = 1, DutyAzul = 1, cuenta = 0;
 
+    // Bucle principal: cambia color cada ~RELOJ/20 ciclos
     while (1) {
         cuenta++;
         if (cuenta < 20) {
@@ -59,40 +43,70 @@ int main(void) {
             DutyRojo = 0;
             DutyVerde = 0;
             DutyAzul = 220;
-
-        }else if (cuenta< 80){
+        } else if (cuenta < 80) {
             DutyRojo = 150;
             DutyVerde = 100;
             DutyAzul = 100;
-        }else{
+        } else {
             cuenta = 0;
         }
-        led(DutyRojo, DutyVerde, DutyAzul);
-        SysCtlDelay(RELOJ / 20); // Delay para que se note el cambio
-    }
-}
-void led(int DutyRojo, int DutyVerde, int DutyAzul) {
-    if (DutyRojo <= Dutymin) {
-        PWMOutputState(PWM0_BASE, PWM_OUT_1_BIT, false);  // apaga salida rojo
-    } else {
-        PWMOutputState(PWM0_BASE, PWM_OUT_1_BIT, true);
-        if(DutyRojo>=Dutymax) DutyRojo=Dutymax;
-        PWMPulseWidthSet(PWM0_BASE, PWM_OUT_1, DutyRojo);
-    }
-    // Lo mismo para verde y azul
-    if (DutyVerde <= Dutymin) {
-        PWMOutputState(PWM0_BASE, PWM_OUT_2_BIT, false);
-    } else {
-        PWMOutputState(PWM0_BASE, PWM_OUT_2_BIT, true);
-        if(DutyVerde>=Dutymax) DutyVerde=Dutymax;
-        PWMPulseWidthSet(PWM0_BASE, PWM_OUT_2, DutyVerde);
-    }
-    if (DutyAzul <= Dutymin) {
-        PWMOutputState(PWM0_BASE, PWM_OUT_3_BIT, false);
-    } else {
-        PWMOutputState(PWM0_BASE, PWM_OUT_3_BIT, true);
-        if(DutyAzul>=Dutymax) DutyAzul=Dutymax;
-        PWMPulseWidthSet(PWM0_BASE, PWM_OUT_3, DutyAzul);
+        led(DutyRojo, DutyVerde, DutyAzul); // actualiza PWM
+        SysCtlDelay(RELOJ / 20); // delay para notar el cambio
     }
 }
 
+void led_Inicializar_Pines(void) {
+    int PeriodoPWM = 255;
+
+    // Activa periféricos necesarios
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOG);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM0);
+    PWMClockSet(PWM0_BASE, PWM_SYSCLK_DIV_4); // divide reloj PWM
+
+    // Configura pines PG1, PK4, PK5 como salidas PWM
+    GPIOPinConfigure(GPIO_PG1_M0PWM5); // Rojo
+    GPIOPinConfigure(GPIO_PK4_M0PWM6); // Verde
+    GPIOPinConfigure(GPIO_PK5_M0PWM7); // Azul
+    GPIOPinTypePWM(GPIO_PORTG_BASE, GPIO_PIN_1);
+    GPIOPinTypePWM(GPIO_PORTK_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+
+    // PWM Gen 2 --> Rojo (PWM_OUT_5)
+    PWMGenConfigure(PWM0_BASE, PWM_GEN_2, PWM_GEN_MODE_DOWN);
+    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_2, PeriodoPWM);
+    PWMGenEnable(PWM0_BASE, PWM_GEN_2);
+
+    // PWM Gen 3 --> Verde y Azul (PWM_OUT_6 y PWM_OUT_7)
+    PWMGenConfigure(PWM0_BASE, PWM_GEN_3, PWM_GEN_MODE_DOWN);
+    PWMGenPeriodSet(PWM0_BASE, PWM_GEN_3, PeriodoPWM);
+    PWMGenEnable(PWM0_BASE, PWM_GEN_3);
+}
+
+void led(int DutyRojo, int DutyVerde, int DutyAzul) {
+    // Rojo (PWM_OUT_5)
+    if (DutyRojo <= Dutymin) {
+        PWMOutputState(PWM0_BASE, PWM_OUT_5_BIT, false);
+    } else {
+        PWMOutputState(PWM0_BASE, PWM_OUT_5_BIT, true);
+        if (DutyRojo >= Dutymax) DutyRojo = Dutymax;
+        PWMPulseWidthSet(PWM0_BASE, PWM_OUT_5, DutyRojo);
+    }
+
+    // Verde (PWM_OUT_6)
+    if (DutyVerde <= Dutymin) {
+        PWMOutputState(PWM0_BASE, PWM_OUT_6_BIT, false);
+    } else {
+        PWMOutputState(PWM0_BASE, PWM_OUT_6_BIT, true);
+        if (DutyVerde >= Dutymax) DutyVerde = Dutymax;
+        PWMPulseWidthSet(PWM0_BASE, PWM_OUT_6, DutyVerde);
+    }
+
+    // Azul (PWM_OUT_7)
+    if (DutyAzul <= Dutymin) {
+        PWMOutputState(PWM0_BASE, PWM_OUT_7_BIT, false);
+    } else {
+        PWMOutputState(PWM0_BASE, PWM_OUT_7_BIT, true);
+        if (DutyAzul >= Dutymax) DutyAzul = Dutymax;
+        PWMPulseWidthSet(PWM0_BASE, PWM_OUT_7, DutyAzul);
+    }
+}

@@ -10,13 +10,16 @@ volatile int preheating = 0;
 const int PREHEAT_TICKS = 600; // 30 segundos (600 × 50 ms)
 bool gasDetectadoAnag;
 bool gasDetected; //salida digital
-// Simulación de modo bajo consumo
-#define SLEEP SysCtlSleepFake()
+
 void SysCtlSleepFake(void)
 {
     while (!Flag_ints);
     Flag_ints = 0;
 }
+
+//#define SLEEP SysCtlSleep()
+#define SLEEP SysCtlSleepFake()
+
 // ISR del Timer0A: se ejecuta cada 50 ms
 void IntTimer0(void)
 {
