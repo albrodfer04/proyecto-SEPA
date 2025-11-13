@@ -41,13 +41,16 @@ void IntTimer0(void)
 }
 
 /* PROTOTIPOS */
-void configurarPWM(void);
-void motorVelocidad(uint8_t porcentaje);
-void motorEncendido(uint8_t estado);
-void motorDireccion(uint8_t dir);
+void motor_Configurar_Pines(void);
+void motor_Velocidad(uint8_t porcentaje);
+void motor_Encendido_Apagado(uint8_t estado);
+void motor_Direccion(uint8_t dir);
 
 /* Configuración del PWM en PF2 (1-2EN del L293) */
-void configurarPWM(void) {
+void motor_Configurar_Pines(void) {
+    // Configurar pines de control de direccion
+    GPIOPinTypeGPIOOutput(GPIO_PORTC_BASE, GPIO_PIN_6 | GPIO_PIN_7);  // 1A y 2A
+
     SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM0);
 
     GPIOPinConfigure(GPIO_PF2_M0PWM2);           // PF2 = M0PWM2
@@ -58,7 +61,7 @@ void configurarPWM(void) {
     PWMGenEnable(PWM0_BASE, PWM_GEN_1);
     PWMOutputState(PWM0_BASE, PWM_OUT_2_BIT, true);
 
-    motorVelocidad(60); // Velocidad inicial
+    motor_Velocidad(60); // Velocidad inicial
 }
 
 int main(void) {
@@ -72,9 +75,6 @@ int main(void) {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM0);
     SysCtlPeripheralClockGating(true);
 
-    /* Configurar solo pines de control (sin LEDs) */
-    GPIOPinTypeGPIOOutput(GPIO_PORTC_BASE, GPIO_PIN_6 | GPIO_PIN_7);  // 1A y 2A
-
     // Configuración del TIMER0
     TimerClockSourceSet(TIMER0_BASE, TIMER_CLOCK_SYSTEM);
     TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
@@ -86,12 +86,12 @@ int main(void) {
     TimerEnable(TIMER0_BASE, TIMER_A);
 
     /* Configurar PWM en PF2 */
-    configurarPWM();
+    motor_Configurar_Pines();
 
     /* Iniciar motor */
-    motorDireccion(0);
-    motorEncendido(1);
-    motorVelocidad(60);
+    motor_Direccion(0);
+    motor_Encendido_Apagado(1);
+    motor_Velocidad(60);
 
     while (1) {
         SLEEP;
@@ -104,22 +104,22 @@ int main(void) {
             estado = (estado + 1) % 4;
             switch (estado) {
             case 0:
-                motorDireccion(0);
-                motorVelocidad(90);
-                motorEncendido(1);
+                motor_Direccion(0);
+                motor_Velocidad(90);
+                motor_Encendido_Apagado(1);
                 break;
             case 1:
-                motorDireccion(1);
-                motorVelocidad(30);
-                motorEncendido(1);
+                motor_Direccion(1);
+                motor_Velocidad(30);
+                motor_Encendido_Apagado(1);
                 break;
             case 2:
-                motorEncendido(0);
+                motor_Encendido_Apagado(0);
                 break;
             case 3:
-                motorDireccion(0);
-                motorVelocidad(10);
-                motorEncendido(1);
+                motor_Direccion(0);
+                motor_Velocidad(30);
+                motor_Encendido_Apagado(1);
                 break;
             }
         }
@@ -129,7 +129,7 @@ int main(void) {
 }
 
 
-void motorDireccion(uint8_t dir) {
+void motor_Direccion(uint8_t dir) {
     if (dir == 0) {
         GPIOPinWrite(GPIO_PORTC_BASE, GPIO_PIN_6, GPIO_PIN_6);  // 1A HIGH
         GPIOPinWrite(GPIO_PORTC_BASE, GPIO_PIN_7, 0);           // 2A LOW
@@ -139,7 +139,7 @@ void motorDireccion(uint8_t dir) {
     }
 }
 
-void motorEncendido(uint8_t estado) {
+void motor_Encendido_Apagado(uint8_t estado) {
     if (estado == 1) {
         PWMOutputState(PWM0_BASE, PWM_OUT_2_BIT, true);
     } else {
@@ -147,7 +147,7 @@ void motorEncendido(uint8_t estado) {
     }
 }
 
-void motorVelocidad(uint8_t porcentaje) {
+void motor_Velocidad(uint8_t porcentaje) {
     if (porcentaje > 100) porcentaje = 100;
     uint32_t ancho = (RELOJ / FREC_PWM) * porcentaje / 100;
     PWMPulseWidthSet(PWM0_BASE, PWM_OUT_2, ancho);
