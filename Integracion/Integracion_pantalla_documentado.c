@@ -148,8 +148,7 @@ int estado_comida=0;
  */
 void SysCtlSleepFake(void)
 {
-    while (!Flag_ints)
-        ;
+    while (!Flag_ints);
     Flag_ints = 0;
 }
 
@@ -172,7 +171,7 @@ void IntTimer0(void)
 
 void Reloj_inicializacion(void);
 void Inicializacion_UART(void);
-void Estado_uart(void);
+//void Estado_uart(void);
 
 /* Detector de humos */
 void humo_Detectar(void);
@@ -521,7 +520,7 @@ int main(void)
                 break;
             }
         }
-       // Estado_uart();
+        // Estado_uart();
         dibuja_pantalla();
         Load = 100 - (100 * TimerValueGet(TIMER0_BASE, TIMER_A)) / ((RELOJ / FREC_TIMER) - 1);
     }
@@ -622,6 +621,14 @@ void puerta_Configurar_Pines(void)
 void puerta_Detectar(void)
 {
     puerta_abierta = GPIOPinRead(GPIO_PORTA_BASE, GPIO_PIN_7); // lee PA7
+    if (puerta_abierta)
+    {
+        UARTprintf("la puerta esta abierta \n");
+    }
+    else
+    {
+        UARTprintf("la puerta esta cerrada \n");
+    }
 }
 
 
@@ -730,8 +737,8 @@ void humo_Detectar(void)
     else
         gasDetectadoAnag = 0;
 
-    //    UARTprintf("\033[2K\rADC: %u\tDOUT: %s DIGITAL), ESTADO: %s", adcValue,
-    //               gasDetected ? "HIGH (Gas" : "LOW (Clean", gasDetectadoAnag ? "ALARMA GAS DETECTADO" : "AIRE LIMPIO");
+    UARTprintf("\033[2K\rADC: %u\tDOUT: %s DIGITAL), ESTADO: %s", adcValue,
+               gasDetected ? "HIGH (Gas" : "LOW (Clean", gasDetectadoAnag ? "ALARMA GAS DETECTADO" : "AIRE LIMPIO");
 }
 
 /**
@@ -766,16 +773,16 @@ void Inicializacion_UART(void)
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
     UARTStdioConfig(0, 115200, RELOJ);
 }
-void Estado_uart(void){
-    char buffer_local[40];
-    char buffer_local2[40];
-    sprintf(buffer_local, "LUZ: %.2f  TEMP: %.2f GAS: %u  SOS_GAS:%s ",lux,T_act,adcValue,gasDetectadoAnag ? "ALARMA GAS DETECTADO" : "AIRE LIMPIO");
-    sprintf(buffer_local2, "PUERTA: %d AYUDA: %d EMERGENCIA: %d Comida: %d Pastilla: %d",puerta_abierta,ayuda,emergencia,comida,pastilla);
-    UARTprintf("\n-------------------------------------------------------------------------------------------------------------------------------");
-    UARTprintf("%s", buffer_local);
-    UARTprintf(" %s", buffer_local2);
-    UARTprintf("\n-------------------------------------------------------------------------------------------------------------------------------");
-}
+//void Estado_uart(void){
+//    char buffer_local[40];
+//    char buffer_local2[40];
+//    sprintf(buffer_local, "LUZ: %.2f  TEMP: %.2f GAS: %u  SOS_GAS:%s ",lux,T_act,adcValue,gasDetectadoAnag ? "ALARMA GAS DETECTADO" : "AIRE LIMPIO");
+//    sprintf(buffer_local2, "PUERTA: %d AYUDA: %d EMERGENCIA: %d Comida: %d Pastilla: %d",puerta_abierta,ayuda,emergencia,comida,pastilla);
+//    UARTprintf("\n-------------------------------------------------------------------------------------------------------------------------------");
+//    UARTprintf("%s", buffer_local);
+//    UARTprintf(" %s", buffer_local2);
+//    UARTprintf("\n-------------------------------------------------------------------------------------------------------------------------------");
+//}
 
 /**
  * @brief Configura reloj del sistema y Timer0A con interrupcion cada 50 ms.
@@ -871,17 +878,20 @@ void sensores_booster_inic(void)
 void lee_sensores(void)
 {
 
+    char buffer_local[32];
     if (Opt_OK)
     {
         lux = OPT3001_getLux();
         lux_i = (int)round(lux);
+        UARTprintf(" OPT300: %d ", lux_i);
     }
     if (Bme_OK)
     {
         returnRslt = bme280_read_pressure_temperature_humidity(&g_u32ActualPress, &g_s32ActualTemp, &g_u32ActualHumity);
         T_act = (float)g_s32ActualTemp / 100.0f;
 
-
+        sprintf(buffer_local, " Temperatura: %.2f C ", T_act);
+        UARTprintf("%s", buffer_local);
     }
 }
 
