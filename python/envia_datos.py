@@ -66,7 +66,7 @@ def web():
         <title>Detector Gas - FUNCIONANDO</title>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <style>
-            body{background:#000;color:#0f0;font-family:Arial;text-align:center;padding:20px}
+            body{background:#fff;color:#0f0;font-family:Arial;text-align:center;padding:20px}
             canvas{background:#111;border:5px solid #0f0;border-radius:20px;margin:30px auto;max-width:95%}
             .estado{font-size:100px;padding:50px;border-radius:40px;margin:40px}
             .limpio{background:#0f0;color:black}
