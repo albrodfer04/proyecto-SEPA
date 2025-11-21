@@ -91,15 +91,8 @@ int estado_ventilador=0;
 int cuenta_vent;
 #define U_Temp_MAX 30
 #define U_Temp_MIN 24
-
-typedef enum {
-    MODO_AUTOMATICO,
-    MODO_MANUAL
-} ModoControl;
-
-ModoControl modoVentilador = MODO_AUTOMATICO;
-unsigned char estadoVentilador = 0;           // 0 = apagado / 1 = encendido
-unsigned long tiempoFinOverride = 0;          // momento en que termina override
+bool manual_v;
+bool manual_l;
 
 /* IMAN */
 char puerta_abierta; // estado de puerta
@@ -306,7 +299,7 @@ int main(void)
                 estado_luz=2;
                 lampara=1;
             }
-            else if (lux<U_LUZ_MIN) {
+            else if (lux<U_LUZ_MIN && !manual_l) {
                 estado_luz=1;
                 lampara=1;
             }
@@ -314,14 +307,14 @@ int main(void)
         case 1:
             led(100,100,100); //luz al 50%
             if(lampara==0) estado_luz=0;
-            else if(lux>U_LUZ_MAX){
+            else if(lux>U_LUZ_MAX && !manual_l){
                 lampara=0;
                 estado_luz=0;}
             break;
         case 2:
             led(255,255,255);
             if(!lampara){estado_luz=0;}
-            else if(lux>U_LUZ_MAX){
+            else if(lux>U_LUZ_MAX && !manual_l){
                 lampara=0;
                 estado_luz=0;}
             break;
@@ -382,7 +375,7 @@ int main(void)
             motor_Velocidad(90);
             motor_Encendido_Apagado(0);
             if(ventilador) estado_ventilador=1;
-            if(T_act>U_Temp_MAX && MODO_AUTOMATICO){ //primeros encendemos a bajo
+            if(T_act>U_Temp_MAX && !manual_v){ //primeros encendemos a bajo
                 ventilador=1;
                 estado_ventilador=1;
             }
@@ -393,14 +386,14 @@ int main(void)
             motor_Velocidad(20);
             motor_Encendido_Apagado(1);
             if(!ventilador) estado_ventilador=0;
-            if(T_act>U_Temp_MAX && MODO_AUTOMATICO){
+            if(T_act>U_Temp_MAX && !manual_v){
                 cuenta_vent++;
                 if(cuenta_vent>50){
                     estado_ventilador++;
                     cuenta_vent=0;
                 }
             }
-            if(T_act<U_Temp_MIN && MODO_AUTOMATICO){
+            if(T_act<U_Temp_MIN && !manual_v){
                 estado_ventilador--;
                 ventilador=0;
             }
@@ -410,7 +403,7 @@ int main(void)
             motor_Velocidad(50);
             motor_Encendido_Apagado(1);
             if(!ventilador) estado_ventilador=0;
-            if(T_act>U_Temp_MAX && MODO_AUTOMATICO){
+            if(T_act>U_Temp_MAX && !manual_v){
                 cuenta_vent++;
                 if(cuenta_vent>50){
                     estado_ventilador++;
@@ -425,7 +418,7 @@ int main(void)
             motor_Velocidad(80);
             motor_Encendido_Apagado(1);
             if(!ventilador) estado_ventilador=0;
-            if(T_act<U_Temp_MIN && MODO_AUTOMATICO) estado_ventilador--;
+            if(T_act<U_Temp_MIN && !manual_v) estado_ventilador--;
             break;
         }
 
@@ -532,7 +525,7 @@ int main(void)
             }
         }
 
-        // Estado_uart();
+        Estado_uart();
         dibuja_pantalla();
         Load = 100 - (100 * TimerValueGet(TIMER0_BASE, TIMER_A)) / ((RELOJ / FREC_TIMER) - 1);
     }
@@ -1094,19 +1087,8 @@ void DatosPantalla(void)
         SysCtlDelay(10 * MSEC);
         while (Boton(HSIZE * 4 / 5, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "AIRE")); // Debouncing
         SysCtlDelay(10 * MSEC);
-        // ---------------- LÓGICA DEL BOTÓN ----------------
-        if (modoVentilador == MODO_MANUAL)
-        {
-            // Si el usuario presiona durante override, cancelar override y volver a automático
-            modoVentilador = MODO_AUTOMATICO;
-        }
-        else
-        {
-            // Activar override y alternar ventilador manualmente
-            ventilador = !ventilador;      // Toggle de estado
-            modoVentilador = MODO_MANUAL;
-        }
-
+        ventilador = !ventilador;
+        manual_v=!manual_v;
     }
 
     if (Boton(HSIZE * 7 / 12, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "LUZ"))
@@ -1115,6 +1097,7 @@ void DatosPantalla(void)
         while (Boton(HSIZE * 7 / 12, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "LUZ")); // Debouncing
         SysCtlDelay(10 * MSEC);
         lampara = !lampara;
+        manual_l=!manual_l;
     }
 
     if (Boton(HSIZE / 10, VSIZE / 2 + 20, HSIZE / 5, HSIZE / 5, 28, "Ayuda"))
