@@ -90,14 +90,14 @@ bool gasDetected;      // salida digital
 const int FREC_PWM = 1000; /* PWM: 1 kHz */
 int estado_ventilador=0;
 int cuenta_vent;
-#define U_Temp_MAX 30
+#define U_Temp_MAX 28
 #define U_Temp_MIN 24
 bool manual_v;
 bool manual_l;
 
 /* IMAN */
 char puerta_abierta; // estado de puerta
-int persona=1;
+int persona=0;
 int cuenta_puerta=0;
 int estado_persona=0;
 /* LED */
@@ -137,6 +137,7 @@ volatile int posicion;
 int ang;
 int estado_persianas=0;
 int cuenta_per=0;
+int manual_p=0;
 
 /* PANTALLA */
 int cont; // contador de mensajes
@@ -379,9 +380,9 @@ int main(void)
             {
             case 0: //ventilador apagado
                 motor_Direccion(0);
-                motor_Velocidad(90);
+                motor_Velocidad(0);
                 motor_Encendido_Apagado(0);
-                if(ventilador) estado_ventilador=1;
+                if(ventilador && !manual_v) estado_ventilador=1;
                 else if(T_act>U_Temp_MAX && !manual_v){ //primeros encendemos a bajo
                     ventilador=1;
                     estado_ventilador=1;
@@ -392,7 +393,7 @@ int main(void)
                 motor_Direccion(0);
                 motor_Velocidad(20);
                 motor_Encendido_Apagado(1);
-                if(!ventilador) estado_ventilador=0;
+                if(!ventilador&& !manual_v) estado_ventilador=0;
                 else if(T_act>U_Temp_MAX && !manual_v){
                     cuenta_vent++;
                     if(cuenta_vent>50){
@@ -407,9 +408,9 @@ int main(void)
                 break;
             case 2:
                 motor_Direccion(0);
-                motor_Velocidad(50);
+                motor_Velocidad(35);
                 motor_Encendido_Apagado(1);
-                if(!ventilador) estado_ventilador=0;
+                if(!ventilador&& !manual_v) estado_ventilador=0;
                 else if(T_act>U_Temp_MAX && !manual_v){
                     cuenta_vent++;
                     if(cuenta_vent>50){
@@ -418,13 +419,13 @@ int main(void)
                     }
 
                 }
-                else if(T_act<U_Temp_MIN) estado_ventilador--;
+                else if(T_act<U_Temp_MIN && !manual_v) estado_ventilador--;
                 break;
             case 3:
                 motor_Direccion(0);
-                motor_Velocidad(80);
+                motor_Velocidad(50);
                 motor_Encendido_Apagado(1);
-                if(!ventilador) estado_ventilador=0;
+                if(!ventilador && !manual_v) estado_ventilador=0;
                 else if(T_act<U_Temp_MIN && !manual_v) estado_ventilador--;
                 break;
             }
@@ -434,29 +435,25 @@ int main(void)
             switch(estado_persianas){
             case 0: //bajadas
                 ang = 0;
-                if((hora==9)){//añadir que si se baja desde la web que no se meta en esto
-                    estado_persianas=1;
-                    MandaMensaje("Ya es de dia");
-                }
-                else if((lux<U_LUZ_MIN)&&(hora<20)) //poca luz y es de dia
+                if((lux<U_LUZ_MIN)&& !manual_p) //poca luz y es de dia
                 {
                     estado_persianas=1;
                 }
                 break;
             case 1:
                 ang = 90;
-                if((lux<U_LUZ_MIN)&&(hora<20)) //poca luz y es de dia
+                if((lux<U_LUZ_MIN) && !manual_p) //poca luz y es de dia
                 {
                     cuenta_per++;
-                    if(cuenta_per>=50){
+                    if(cuenta_per>=5){
                         cuenta_per=0;
                         estado_persianas=2;
                     }
                 }
-                else if((lux>U_LUZ_MAX)) //mucha luz y es de dia
+                else if((lux>U_LUZ_MAX) && !manual_p) //mucha luz y es de dia
                 {
                     cuenta_per++;
-                    if(cuenta_per>=50){
+                    if(cuenta_per>=5){
                         cuenta_per=0;
                         estado_persianas=0;
                     }
@@ -465,17 +462,13 @@ int main(void)
                 break;
             case 2:
                 ang = 180;
-                if((lux>U_LUZ_MAX)) //mucha luz y es de dia
+                if((lux>U_LUZ_MAX) && !manual_p) //mucha luz y es de dia
                 {
                     cuenta_per++;
-                    if(cuenta_per>=50){
+                    if(cuenta_per>=5){
                         cuenta_per=0;
                         estado_persianas=1;
                     }
-                }
-                else if(hora>20){
-                    estado_persianas=0;
-                    MandaMensaje("Ya es de noche");
                 }
                 break;
             }
@@ -489,7 +482,7 @@ int main(void)
                 break;
             case 1:
                 cuenta_puerta++;
-                if (cuenta_puerta>100){
+                if (cuenta_puerta>15){
                     ayuda=1;
                     cuenta_puerta=0;
                 }
@@ -500,41 +493,8 @@ int main(void)
                 break;
             }
             Estado_uart();
-            Servo(ang);
         }
-        static uint32_t contador = 0;
-        contador++;
-        if (contador >= 100)
-        {
-            contador = 0;
-            static uint8_t estado = 0;
-            estado = (estado + 1) % 4;
-            switch (estado)
-            {
-            case 0:
-                hora=8;
-
-                pastilla = 1;
-                break;
-            case 1:
-                hora=9;
-                ang = 45;
-
-                break;
-            case 2:
-                hora=16;
-                ang = 90;
-                comida=1;
-                break;
-            case 3:
-                hora=21;
-                ang = 170;
-
-                break;
-            default:
-                break;
-            }
-        }
+        Servo(ang);
         dibuja_pantalla();
         Load = 100 - (100 * TimerValueGet(TIMER0_BASE, TIMER_A)) / ((RELOJ / FREC_TIMER) - 1);
     }
@@ -742,14 +702,6 @@ void humo_Detectar(void)
         ;
     ADCIntClear(ADC0_BASE, 3);
     ADCSequenceDataGet(ADC0_BASE, 3, &adcValue);
-
-    /* PP0 DOUT (digital) */
-    gasDetected = (GPIOPinRead(GPIO_PORTP_BASE, GPIO_PIN_0) == 0);
-
-    if (adcValue > 870)
-        gasDetectadoAnag = 1;
-    else
-        gasDetectadoAnag = 0;
 
     UARTprintf("GAS:%u  ", adcValue);
 }
@@ -1126,92 +1078,72 @@ void ComandosWeb(void)
         UARTCharPutNonBlocking(UART0_BASE, num);
         if(num=='N'){
             lampara = 0;
-            manual_l=0;
+            manual_l=!manual_l;
             estado_luz=0;
         }
-    }
-    if (UARTCharsAvail(UART0_BASE)){
-        num=UARTCharGetNonBlocking(UART0_BASE);
-        UARTCharPutNonBlocking(UART0_BASE, num);
-        if(num=='I'){
+
+        else if(num=='I'){
             lampara = 1;
-            manual_l=1;
+            manual_l=!manual_l;
             estado_luz=1;
         }
-    }
-    if (UARTCharsAvail(UART0_BASE)){
-        num=UARTCharGetNonBlocking(UART0_BASE);
-        UARTCharPutNonBlocking(UART0_BASE, num);
-        if(num=='M'){
+
+        else if(num=='M'){
             lampara = 1;
-            manual_l=1;
+            manual_l=!manual_l;
             estado_luz=2;
         }
-    }
-    if (UARTCharsAvail(UART0_BASE)){
-        num=UARTCharGetNonBlocking(UART0_BASE);
-        UARTCharPutNonBlocking(UART0_BASE, num);
+
         if(num=='B'){
             ventilador = 1;
-            manual_v=1;
+            manual_v=!manual_v;
             estado_ventilador=3;
         }
-    }
-    if (UARTCharsAvail(UART0_BASE)){
-        num=UARTCharGetNonBlocking(UART0_BASE);
-        UARTCharPutNonBlocking(UART0_BASE, num);
-        if(num=='R'){
+
+        else if(num=='R'){
             ventilador = 1;
-            manual_v=1;
+            manual_v=!manual_v;
             estado_ventilador=2;
         }
-    }
-    if (UARTCharsAvail(UART0_BASE)){
-        num=UARTCharGetNonBlocking(UART0_BASE);
-        UARTCharPutNonBlocking(UART0_BASE, num);
-        if(num=='L'){
+
+        else if(num=='L'){
             ventilador = 1;
-            manual_v=1;
+            manual_v=!manual_v;
             estado_ventilador=1;
         }
-    }
-    if (UARTCharsAvail(UART0_BASE)){
-            num=UARTCharGetNonBlocking(UART0_BASE);
-            UARTCharPutNonBlocking(UART0_BASE, num);
-            if(num=='O'){
-                ventilador = 1;
-                        manual_v=1;
-                        estado_ventilador=0;
-            }
-        }
-    if (UARTCharsAvail(UART0_BASE)){
-               num=UARTCharGetNonBlocking(UART0_BASE);
-               UARTCharPutNonBlocking(UART0_BASE, num);
-               if(num=='P'){
-                   pastilla=1;
-               }
-           }
-    if (UARTCharsAvail(UART0_BASE)){
-                   num=UARTCharGetNonBlocking(UART0_BASE);
-                   UARTCharPutNonBlocking(UART0_BASE, num);
-                   if(num=='C'){
-                       comida=1;
-                   }
-               }
 
-    if (UARTCharsAvail(UART0_BASE)){
-        num=UARTCharGetNonBlocking(UART0_BASE);
-        UARTCharPutNonBlocking(UART0_BASE, num);
-        if(num=='A'){
+        else if(num=='O'){
+            ventilador = 1;
+            manual_v=!manual_v;
+            estado_ventilador=0;
+        }
+
+        else if(num=='P'){
+            pastilla=1;
+        }
+
+        else if(num=='C'){
+            comida=1;
+        }
+
+        else if(num=='A'){
             MandaMensaje("Ayuda en camino");
             ayuda=0;}
-    }
 
-    if (UARTCharsAvail(UART0_BASE)){
-            num=UARTCharGetNonBlocking(UART0_BASE);
-            UARTCharPutNonBlocking(UART0_BASE, num);
-            if(num=='S'){
-                MandaMensaje("Ayuda en camino");
-                emergencia=0;}
-        }
+        else if(num=='S'){
+            MandaMensaje("Ayuda en camino");
+            emergencia=0;}
+
+        else if(num=='U'){
+            manual_p=!manual_p;
+            estado_persianas=2;}
+
+        else if(num=='Z'){
+            manual_p=!manual_p;
+            estado_persianas=1;}
+
+        else if(num=='D'){
+            manual_p=!manual_p;
+            estado_persianas=0;}
+    }
 }
