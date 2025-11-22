@@ -77,6 +77,7 @@ volatile int Flag_ints = 0;
 const int FREC_TIMER = 20;        // 50 ms
 int Load;
 int hora;
+int cuenta;
 
 /* DETECTOR DE HUMOS */
 uint32_t adcValue;
@@ -287,212 +288,218 @@ int main(void)
     while (1)
     {
         SLEEP; // 50 ms
-        humo_Detectar();
-        puerta_Detectar();
-        lee_sensores();
-        Servo(ang);
-        DatosPantalla();
-        ComandosWeb();
-        /** Maquina de estado Luz----------------------------------------------------------------------------------------------------------------*/
-        switch(estado_luz){
-        case 0:
-            led(0, 0, 0);
-            if(lampara==1) {
-                MandaMensaje("Luz encendida");
-                estado_luz=2;
-                lampara=1;
-            }
-            else if (lux<U_LUZ_MIN && !manual_l) {
-                estado_luz=1;
-                lampara=1;
-            }
-            break;
-        case 1:
-            led(100,100,100); //luz al 50%
-            if(lampara==0) estado_luz=0;
-            else if(lux>U_LUZ_MAX && !manual_l){
-                lampara=0;
-                estado_luz=0;}
-            break;
-        case 2:
-            led(255,255,255);
-            if(!lampara){estado_luz=0;}
-            else if(lux>U_LUZ_MAX && !manual_l){
-                lampara=0;
-                estado_luz=0;}
-            break;
-        }
-
-        /** Maquina estado pastilla-----------------------------------------------------------------------*/
-        switch(estado_pastilla)
-        {
-        case 0://sin pastilla activado
-            if(pastilla==1){
-                MandaMensaje("Toma pastilla");
-                estado_pastilla=1;
-                TocaNota(PIANO, SOL);
-            }
-            break;
-        case 1:
-            cuenta_pastilla++;
-            if(cuenta_pastilla>20){
-                TocaNota(SILENCIO, SOL);
-            }
-            if(pastilla==0){
-                //manda pastilla tomada
-                estado_pastilla=0;
-                cuenta_pastilla=0;
-            }
-            break;
-        }
-
-        /** Maquina estado comida-----------------------------------------------------------------------*/
-        switch(estado_comida)
-        {
-        case 0://sin pastilla activado
-            if(comida==1){
-                MandaMensaje("Toma comida");
-                estado_comida=1;
-                TocaNota(TROMPETA, SOL);
-            }
-            break;
-        case 1:
-            cuenta_comida++;
-            if(cuenta_comida>20){
-                TocaNota( SILENCIO, SOL);
-            }
-            if(comida==0){
-                //manda comida tomada a web
-                estado_comida=0;
-                cuenta_comida=0;
-            }
-            break;
-        }
-
-
-        /**Maquina estados ventilador--------------------------------------------------------------------*/
-        switch(estado_ventilador)
-        {
-        case 0: //ventilador apagado
-            motor_Direccion(0);
-            motor_Velocidad(90);
-            motor_Encendido_Apagado(0);
-            if(ventilador) estado_ventilador=1;
-            if(T_act>U_Temp_MAX && !manual_v){ //primeros encendemos a bajo
-                ventilador=1;
-                estado_ventilador=1;
-            }
-            //poner si se enciende de web
-            break;
-        case 1:
-            motor_Direccion(0);
-            motor_Velocidad(20);
-            motor_Encendido_Apagado(1);
-            if(!ventilador) estado_ventilador=0;
-            if(T_act>U_Temp_MAX && !manual_v){
-                cuenta_vent++;
-                if(cuenta_vent>50){
-                    estado_ventilador++;
-                    cuenta_vent=0;
+        cuenta++;
+        if (cuenta>20){ // Cada 1s
+            cuenta=0;
+            humo_Detectar();
+            puerta_Detectar();
+            lee_sensores();
+            Servo(ang);
+            DatosPantalla();
+            ComandosWeb();
+            /** Maquina de estado Luz----------------------------------------------------------------------------------------------------------------*/
+            switch(estado_luz){
+            case 0:
+                led(0, 0, 0);
+                if(lampara==1) {
+                    MandaMensaje("Luz encendida");
+                    estado_luz=2;
+                    lampara=1;
                 }
-            }
-            if(T_act<U_Temp_MIN && !manual_v){
-                estado_ventilador--;
-                ventilador=0;
-            }
-            break;
-        case 2:
-            motor_Direccion(0);
-            motor_Velocidad(50);
-            motor_Encendido_Apagado(1);
-            if(!ventilador) estado_ventilador=0;
-            if(T_act>U_Temp_MAX && !manual_v){
-                cuenta_vent++;
-                if(cuenta_vent>50){
-                    estado_ventilador++;
-                    cuenta_vent=0;
+                else if (lux<U_LUZ_MIN && !manual_l) {
+                    estado_luz=1;
+                    lampara=1;
                 }
-
+                break;
+            case 1:
+                led(100,100,100); //luz al 50%
+                if(lampara==0) estado_luz=0;
+                else if(lux>U_LUZ_MAX && !manual_l){
+                    lampara=0;
+                    estado_luz=0;}
+                break;
+            case 2:
+                led(255,255,255);
+                if(!lampara){estado_luz=0;}
+                else if(lux>U_LUZ_MAX && !manual_l){
+                    lampara=0;
+                    estado_luz=0;}
+                break;
             }
-            if(T_act<U_Temp_MIN) estado_ventilador--;
-            break;
-        case 3:
-            motor_Direccion(0);
-            motor_Velocidad(80);
-            motor_Encendido_Apagado(1);
-            if(!ventilador) estado_ventilador=0;
-            if(T_act<U_Temp_MIN && !manual_v) estado_ventilador--;
-            break;
-        }
 
-        /**maquina estado persianas-----------------------------------------------------------------------*/
-
-        switch(estado_persianas){
-        case 0: //bajadas
-            ang = 0;
-            if((hora==9)){//añadir que si se baja desde la web que no se meta en esto
-                estado_persianas=1;
-                MandaMensaje("Ya es de dia");
-            }
-            if((lux<U_LUZ_MIN)&&(hora<20)) //poca luz y es de dia
+            /** Maquina estado pastilla-----------------------------------------------------------------------*/
+            switch(estado_pastilla)
             {
-                estado_persianas=1;
-            }
-            break;
-        case 1:
-            ang = 90;
-            if((lux<U_LUZ_MIN)&&(hora<20)) //poca luz y es de dia
-            {
-                cuenta_per++;
-                if(cuenta_per>=50){
-                    cuenta_per=0;
-                    estado_persianas=2;
+            case 0://sin pastilla activado
+                if(pastilla==1){
+                    MandaMensaje("Toma pastilla");
+                    estado_pastilla=1;
+                    TocaNota(PIANO, SOL);
                 }
-            }
-            if((lux>U_LUZ_MAX)) //mucha luz y es de dia
-            {
-                cuenta_per++;
-                if(cuenta_per>=50){
-                    cuenta_per=0;
-                    estado_persianas=0;
+                break;
+            case 1:
+                cuenta_pastilla++;
+                if(cuenta_pastilla>20){
+                    TocaNota(SILENCIO, SOL);
                 }
+                else if(pastilla==0){
+                    //manda pastilla tomada
+                    estado_pastilla=0;
+                    cuenta_pastilla=0;
+                }
+                break;
             }
-            //añadir que se bajen desde web
-            break;
-        case 2:
-            ang = 180;
-            if((lux>U_LUZ_MAX)) //mucha luz y es de dia
+
+            /** Maquina estado comida-----------------------------------------------------------------------*/
+            switch(estado_comida)
             {
-                cuenta_per++;
-                if(cuenta_per>=50){
-                    cuenta_per=0;
+            case 0://sin pastilla activado
+                if(comida==1){
+                    MandaMensaje("Toma comida");
+                    estado_comida=1;
+                    TocaNota(TROMPETA, SOL);
+                }
+                break;
+            case 1:
+                cuenta_comida++;
+                if(cuenta_comida>20){
+                    TocaNota( SILENCIO, SOL);
+                }
+                else if(comida==0){
+                    //manda comida tomada a web
+                    estado_comida=0;
+                    cuenta_comida=0;
+                }
+                break;
+            }
+
+
+            /**Maquina estados ventilador--------------------------------------------------------------------*/
+            switch(estado_ventilador)
+            {
+            case 0: //ventilador apagado
+                motor_Direccion(0);
+                motor_Velocidad(90);
+                motor_Encendido_Apagado(0);
+                if(ventilador) estado_ventilador=1;
+                else if(T_act>U_Temp_MAX && !manual_v){ //primeros encendemos a bajo
+                    ventilador=1;
+                    estado_ventilador=1;
+                }
+                //poner si se enciende de web
+                break;
+            case 1:
+                motor_Direccion(0);
+                motor_Velocidad(20);
+                motor_Encendido_Apagado(1);
+                if(!ventilador) estado_ventilador=0;
+                else if(T_act>U_Temp_MAX && !manual_v){
+                    cuenta_vent++;
+                    if(cuenta_vent>50){
+                        estado_ventilador++;
+                        cuenta_vent=0;
+                    }
+                }
+                else if(T_act<U_Temp_MIN && !manual_v){
+                    estado_ventilador--;
+                    ventilador=0;
+                }
+                break;
+            case 2:
+                motor_Direccion(0);
+                motor_Velocidad(50);
+                motor_Encendido_Apagado(1);
+                if(!ventilador) estado_ventilador=0;
+                else if(T_act>U_Temp_MAX && !manual_v){
+                    cuenta_vent++;
+                    if(cuenta_vent>50){
+                        estado_ventilador++;
+                        cuenta_vent=0;
+                    }
+
+                }
+                else if(T_act<U_Temp_MIN) estado_ventilador--;
+                break;
+            case 3:
+                motor_Direccion(0);
+                motor_Velocidad(80);
+                motor_Encendido_Apagado(1);
+                if(!ventilador) estado_ventilador=0;
+                else if(T_act<U_Temp_MIN && !manual_v) estado_ventilador--;
+                break;
+            }
+
+            /**maquina estado persianas-----------------------------------------------------------------------*/
+
+            switch(estado_persianas){
+            case 0: //bajadas
+                ang = 0;
+                if((hora==9)){//añadir que si se baja desde la web que no se meta en esto
+                    estado_persianas=1;
+                    MandaMensaje("Ya es de dia");
+                }
+                else if((lux<U_LUZ_MIN)&&(hora<20)) //poca luz y es de dia
+                {
                     estado_persianas=1;
                 }
+                break;
+            case 1:
+                ang = 90;
+                if((lux<U_LUZ_MIN)&&(hora<20)) //poca luz y es de dia
+                {
+                    cuenta_per++;
+                    if(cuenta_per>=50){
+                        cuenta_per=0;
+                        estado_persianas=2;
+                    }
+                }
+                else if((lux>U_LUZ_MAX)) //mucha luz y es de dia
+                {
+                    cuenta_per++;
+                    if(cuenta_per>=50){
+                        cuenta_per=0;
+                        estado_persianas=0;
+                    }
+                }
+                //añadir que se bajen desde web
+                break;
+            case 2:
+                ang = 180;
+                if((lux>U_LUZ_MAX)) //mucha luz y es de dia
+                {
+                    cuenta_per++;
+                    if(cuenta_per>=50){
+                        cuenta_per=0;
+                        estado_persianas=1;
+                    }
+                }
+                else if(hora>20){
+                    estado_persianas=0;
+                    MandaMensaje("Ya es de noche");
+                }
+                break;
             }
-            if(hora>20){
-                estado_persianas=0;
-                MandaMensaje("Ya es de noche");
+            /** Gestion personas-------------------------------------------------------------*/
+            switch (estado_persona){
+            case 0: //Puerta cerrada
+                if(puerta_abierta){
+                    estado_persona=1;
+                    persona=!persona;
+                }
+                break;
+            case 1:
+                cuenta_puerta++;
+                if (cuenta_puerta>100){
+                    ayuda=1;
+                    cuenta_puerta=0;
+                }
+                else if (!puerta_abierta){
+                    cuenta_puerta=0;
+                    estado_persona=0;
+                }
+                break;
             }
-            break;
-        }
-        /** Gestion personas-------------------------------------------------------------*/
-        switch (estado_persona){
-        case 0: //Puerta cerrada
-            if(puerta_abierta){
-                estado_persona=1;
-                persona=!persona;
-            }
-            break;
-        case 1:
-            cuenta_puerta++;
-            if (cuenta_puerta>100){
-                ayuda=1;
-                cuenta_puerta=0;
-            }
-            else if (!puerta_abierta){
-                cuenta_puerta=0;
-                estado_persona=0;
-            }
+            Estado_uart();
         }
         static uint32_t contador = 0;
         contador++;
@@ -527,8 +534,6 @@ int main(void)
                 break;
             }
         }
-
-        //Estado_uart();
         dibuja_pantalla();
         Load = 100 - (100 * TimerValueGet(TIMER0_BASE, TIMER_A)) / ((RELOJ / FREC_TIMER) - 1);
     }
@@ -631,11 +636,11 @@ void puerta_Detectar(void)
     puerta_abierta = GPIOPinRead(GPIO_PORTA_BASE, GPIO_PIN_7); // lee PA7
     if (puerta_abierta)
     {
-        // UARTprintf("PA  ");
+        UARTprintf("PA  ");
     }
     else
     {
-        // UARTprintf("PC  ");
+        UARTprintf("PC  ");
     }
 }
 
@@ -745,7 +750,7 @@ void humo_Detectar(void)
     else
         gasDetectadoAnag = 0;
 
-    // UARTprintf("GAS:%u  ", adcValue);
+    UARTprintf("GAS:%u  ", adcValue);
 }
 
 /**
@@ -783,7 +788,7 @@ void Inicializacion_UART(void)
 void Estado_uart(void){
     char buffer_local[40];
     sprintf(buffer_local, "A: %d SOS: %d C: %d Past: %d Pers: %d \n",ayuda,emergencia,comida,pastilla,persona);
-    //UARTprintf("%s", buffer_local);
+    UARTprintf("%s", buffer_local);
 }
 
 /**
@@ -885,7 +890,7 @@ void lee_sensores(void)
     {
         lux = OPT3001_getLux();
         lux_i = (int)round(lux);
-        // UARTprintf("LUZ: %d ", lux_i);
+        UARTprintf("LUZ: %d ", lux_i);
     }
     if (Bme_OK)
     {
@@ -893,7 +898,7 @@ void lee_sensores(void)
         T_act = (float)g_s32ActualTemp / 100.0f;
 
         sprintf(buffer_local, "T: %.2f", T_act);
-        // UARTprintf("%s ", buffer_local);
+        UARTprintf("%s ", buffer_local);
     }
 }
 
