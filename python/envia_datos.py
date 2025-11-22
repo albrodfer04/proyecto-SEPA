@@ -12,7 +12,7 @@ import re  # expresiones regulares para parsear las líneas
 mi_app = Flask(__name__)
 
 # ==== CONFIG SERIAL Y ARCHIVO ====
-mi_puerto = "COM4"  # puerto donde está la Tiva
+mi_puerto = "COM6"  # puerto donde está la Tiva
 mi_archivo = r"C:\Users\aledi\Desktop\live_data.txt"  # donde guardamos los datos
 
 # abrir puerto serie con baudrate 115200
@@ -81,7 +81,7 @@ def hilo_lector_tiva():
                     if len(luz) > 200: luz.pop(0)
 
                     # determinamos el estado del aire según el gas
-                    estado_actual = "GAS DETECTADO" if gas_valor > 800 else "AIRE LIMPIO"
+                    estado_actual = "GAS DETECTADO" if gas_valor > 1000 else "AIRE LIMPIO"
 
             except:
                 pass  # ignoramos cualquier error de parseo
@@ -181,6 +181,15 @@ button:hover { opacity: 0.8; }
 
 <!-- DIV PRINCIPAL DE ESTADO -->
 <div id="estado" class="estado limpio">CARGANDO...</div>
+<!-- CARTEL PUERTA Y PERSONA -->
+<div style="display: flex; justify-content: center; gap: 40px; margin: 30px 0; flex-wrap: wrap;">
+    <div id="cartelPuerta" style="padding: 25px 40px; border-radius: 20px; font-size: 36px; font-weight: bold; color: white; min-width: 280px; box-shadow: 0 6px 15px rgba(0,0,0,0.2);">
+        PUERTA: CARGANDO...
+    </div>
+    <div id="cartelPersona" style="padding: 25px 40px; border-radius: 20px; font-size: 36px; font-weight: bold; color: white; min-width: 280px; box-shadow: 0 6px 15px rgba(0,0,0,0.2);">
+        PERSONA: CARGANDO...
+    </div>
+</div>
 
 <!-- BOTONES DE ALERTA -->
 <div class="alert-buttons">
@@ -250,9 +259,9 @@ const opciones = {
 
 // Crear las 3 gráficas (muy corto)
 const charts = {
-    gas:  new Chart(ctxGas,  { ...opciones, data: { labels: [], datasets: [{ label: 'Gas',  data: [], borderColor: '#2196F3', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { max: 4095 } } } }),
-    luz:  new Chart(ctxLuz,  { ...opciones, data: { labels: [], datasets: [{ label: 'Luz',  data: [], borderColor: '#FF9800', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { max: 1023 } } } }),
-    temp: new Chart(ctxTemp, { ...opciones, data: { labels: [], datasets: [{ label: 'Temp °C', data: [], borderColor: '#F44336', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { min: 15, max: 40 } } } })
+    gas:  new Chart(ctxGas,  { ...opciones, data: { labels: [], datasets: [{ label: 'Gas',  data: [], borderColor: '#2196F3', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { max: 3000 } } } }),
+    luz:  new Chart(ctxLuz,  { ...opciones, data: { labels: [], datasets: [{ label: 'Luz',  data: [], borderColor: '#FF9800', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { max: 4000 } } } }),
+    temp: new Chart(ctxTemp, { ...opciones, data: { labels: [], datasets: [{ label: 'Temp °C', data: [], borderColor: '#F44336', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { min: 10, max: 40 } } } })
 };
 
 // ===================== ACTUALIZACIÓN CADA 500ms (¡SÚPER SIMPLE!) =====================
@@ -264,6 +273,17 @@ setInterval(async () => {
     const estado = document.getElementById("estado");
     estado.textContent = d.sos ? "SOS ACTIVADO" : d.ayuda ? "AYUDA PEDIDA" : d.e;
     estado.className = "estado " + (d.sos || d.ayuda || d.e.includes("GAS") ? "gas" : "limpio");
+
+        // === ACTUALIZAR CARTEL DE PUERTA ===
+    const cartelPuerta = document.getElementById("cartelPuerta");
+    cartelPuerta.textContent = `PUERTA: ${d.puerta}`;
+    cartelPuerta.style.backgroundColor = d.puerta === "ABIERTA" ? "#e53935" : "#43a047";  // rojo o verde
+
+    // === ACTUALIZAR CARTEL DE PERSONA ===
+    const cartelPersona = document.getElementById("cartelPersona");
+    cartelPersona.textContent = `PERSONA: ${d.persona}`;
+    cartelPersona.style.backgroundColor = d.persona === "DENTRO" ? "#43a047" : "#b0b0b0";  // verde si está dentro, gris si no
+    cartelPersona.style.color = d.persona === "DENTRO" ? "white" : "#333";
 
     document.getElementById("alertPast").style.display = d.pastillas ? "block" : "none";
     document.getElementById("alertComida").style.display = d.comida ? "block" : "none";
@@ -357,23 +377,25 @@ def luz_alta():
 # === CONTROL PERSIANAS
 @mi_app.route("/blind/up")
 def persiana_subir():
-    puerto_serial.write(b'U')
+    puerto_serial.write(b'D')
     return "Persiana subiendo"
 
 @mi_app.route("/blind/mid")
 def persiana_medio():
-    puerto_serial.write(b'M')
+    puerto_serial.write(b'Z')
     return "Persiana a mitad"
 
 @mi_app.route("/blind/down")
 def persiana_bajar():
-    puerto_serial.write(b'D')
+    puerto_serial.write(b'U')
     return "Persiana bajando"
-
 
 # ====================== RUTA DE DATOS JSON ======================
 @mi_app.route("/data")
 def endpoint_datos():
+    estado_puerta = "ABIERTA" if puerta == "PA" else "CERRADA"
+    estado_persona = "DENTRO" if persona == 1 else "FUERA"
+    
     return jsonify({
         "v": gas_adcc.copy(),
         "luz": luz.copy(),
@@ -382,7 +404,11 @@ def endpoint_datos():
         "ayuda": ayuda,
         "sos": sos,
         "comida": comida,
-        "pastillas": pastillas
+        "pastillas": pastillas,
+        "puerta": estado_puerta,      # nuevo
+        "persona": estado_persona,    # nuevo
+        "puerta_raw": puerta,         # opcional, por si quieres el código original
+        "persona_raw": persona
     })
 
 # ====================== INICIO DEL HILO Y DEL SERVIDOR ======================
