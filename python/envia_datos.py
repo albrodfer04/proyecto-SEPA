@@ -1,84 +1,96 @@
 # todo_en_uno_FINAL.py
-from flask import Flask, jsonify, request
-import serial
-import threading
+# Proyecto de control domótico en tiempo real con Flask y Tiva
+# Autor: estudiante de 4º ingeniería 😎
+
+from flask import Flask, jsonify, request  # para la web y los endpoints
+import serial  # comunicación con Tiva por puerto serie
+import threading  # para leer el serial en paralelo
 import time
-import re
+import re  # expresiones regulares para parsear las líneas
 
-app = Flask(__name__)
+# ==== CREO LA APP DE FLASK ====
+mi_app = Flask(__name__)
 
-PUERTO = "COM6"
-ARCHIVO = r"C:\Users\aledi\Desktop\live_data.txt"
+# ==== CONFIG SERIAL Y ARCHIVO ====
+mi_puerto = "COM4"  # puerto donde está la Tiva
+mi_archivo = r"C:\Users\aledi\Desktop\live_data.txt"  # donde guardamos los datos
 
-# Abrir puerto serial
-ser = serial.Serial(PUERTO, 115200, timeout=0.1)
-print(f"Conectado a {PUERTO} – esperando datos de la Tiva...")
+# abrir puerto serie con baudrate 115200
+puerto_serial = serial.Serial(mi_puerto, 115200, timeout=0.1)
+print(f"Conectado a {mi_puerto} – esperando datos de la Tiva...")
 
-# Buffers y variables globales
-datos_adc = []
-datos_temp = []
-datos_humo = []
-datos_luz = []
+# ==== BUFFERS PARA GUARDAR DATOS Y VARIABLES GLOBALES ====
+gas_adcc = []
+temp = []
+luz = []
+
 puerta = "PA"
 ayuda = 0
 sos = 0
 comida = 0
-past = 0
+pastillas = 0
 persona = 0
-estado_actual = "CARGANDO..."
+estado_actual = "CARGANDO..."  # estado inicial
 
-# ====================== HILO LECTOR SERIAL ======================
-def lector_tiva():
-    global datos_adc, datos_temp, datos_luz, estado_actual
-    global ayuda, sos, comida, past, persona, puerta
+# ====================== HILO QUE LEE EL SERIAL ======================
+def hilo_lector_tiva():
+    """Hilo que corre en paralelo y lee las líneas que manda la Tiva por serial"""
+    global gas_adcc, temp, luz, estado_actual
+    global ayuda, sos, comida, pastillas, persona, puerta
 
     while True:
-        if ser.in_waiting > 0:
+        if puerto_serial.in_waiting > 0:
             try:
-                linea = ser.readline().decode('utf-8', errors='ignore').strip()
+                linea = puerto_serial.readline().decode('utf-8', errors='ignore').strip()
                 if not linea:
-                    continue
+                    continue  # si viene vacía, seguimos
 
-                print(linea)
+                print(linea)  # imprimimos para debug
 
-                with open(ARCHIVO, "a", encoding="utf-8") as f:
+                # guardamos la línea en un archivo para registros
+                with open(mi_archivo, "a", encoding="utf-8") as f:
                     f.write(linea + "\n")
 
-                regex_all = re.compile(
+                # regex para extraer todos los valores
+                patron = re.compile(
                     r"GAS:(\d+).*?(PA|PC).*?LUZ:\s*(\d+).*?T:\s*([0-9]+(?:\.[0-9]+)?)"
                     r".*?A:\s*(\d+).*?SOS:\s*(\d+).*?C:\s*(\d+).*?Past:\s*(\d+).*?Pers:\s*(\d+)",
                     re.IGNORECASE
                 )
 
-                match = regex_all.search(linea)
+                match = patron.search(linea)
                 if match:
-                    gas     = int(match.group(1))
-                    puerta  = match.group(2)
-                    luz     = int(match.group(3))
-                    temp    = float(match.group(4))
-                    ayuda   = int(match.group(5))
-                    sos     = int(match.group(6))
-                    comida  = int(match.group(7))
-                    past    = int(match.group(8))
-                    persona = int(match.group(9))
+                    gas_valor     = int(match.group(1))
+                    puerta = match.group(2)
+                    luz_valor     = int(match.group(3))
+                    temp_valor    = float(match.group(4))
+                    ayuda    = int(match.group(5))
+                    sos      = int(match.group(6))
+                    comida   = int(match.group(7))
+                    pastillas= int(match.group(8))
+                    persona  = int(match.group(9))
 
-                    datos_adc.append(gas)
-                    datos_temp.append(temp)
-                    datos_luz.append(luz)
+                    # agregamos los datos a los buffers
+                    gas_adcc.append(gas_valor)
+                    temp.append(temp_valor)
+                    luz.append(luz_valor)
 
-                    if len(datos_adc) > 200: datos_adc.pop(0)
-                    if len(datos_temp) > 200: datos_temp.pop(0)
-                    if len(datos_luz) > 200: datos_luz.pop(0)
+                    # mantenemos solo los últimos 200 datos para que no explote la memoria
+                    if len(gas_adcc) > 200: gas_adcc.pop(0)
+                    if len(temp) > 200: temp.pop(0)
+                    if len(luz) > 200: luz.pop(0)
 
-                    estado_actual = "GAS DETECTADO" if gas > 800 else "AIRE LIMPIO"
+                    # determinamos el estado del aire según el gas
+                    estado_actual = "GAS DETECTADO" if gas_valor > 800 else "AIRE LIMPIO"
 
             except:
-                pass
-        time.sleep(0.01)
+                pass  # ignoramos cualquier error de parseo
+        time.sleep(0.01)  # dormimos un poquito para no saturar el CPU
 
-# ====================== RUTA PRINCIPAL WEB ======================
-@app.route("/")
-def web():
+# ====================== RUTA PRINCIPAL DE LA WEB ======================
+@mi_app.route("/")
+def pagina_web():
+    # aquí va todo el HTML/JS/CSS embebido
     return '''
 <!DOCTYPE html>
 <html lang="es">
@@ -87,9 +99,11 @@ def web():
 <title>Control Domótico - Sensor, Ventilador y LED RGB</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+/* ================== ESTILOS GENERALES ================== */
 body { background: #fff; color: #333; font-family: 'Segoe UI', Arial, sans-serif; text-align: center; padding: 40px; }
 h1 { font-size: 48px; margin-bottom: 20px; color: #0a0; }
 
+/* ===== ESTADO DEL SENSOR DE GAS ===== */
 .estado {
     font-size: 48px;
     padding: 20px;
@@ -99,38 +113,93 @@ h1 { font-size: 48px; margin-bottom: 20px; color: #0a0; }
     max-width: 600px;
     transition: background 0.5s, color 0.5s;
 }
-.limpio { background: #0f0; color: #000; }
-.gas { background: #c00; color: #fff; animation: parp 1s infinite; }
+.limpio { background: #0f0; color: #000; } /* aire limpio */
+.gas { background: #c00; color: #fff; animation: parp 1s infinite; } /* gas detectado parpadeando */
 @keyframes parp { 50% { opacity:0.4; } }
 
+/* ===== GRÁFICAS ===== */
 .charts { display: flex; justify-content: center; gap: 25px; flex-wrap: wrap; margin-bottom: 40px; }
-canvas { width: 350px !important; height: 260px !important; background: #000; border: 3px solid #0f0; border-radius: 15px; }
+canvas { width: 350px !important; height: 260px !important; background: #FAFAFA; border: 3px solid #DEDEDE; border-radius: 15px; }
+
+/* ===== BOTONES ===== */
+.alert-buttons {
+    margin-top: 25px;
+    display: flex;
+    justify-content: center;
+    gap: 25px;      /* separación entre botones */
+    flex-wrap: wrap; /* se adaptan cuando no hay espacio */
+}
 
 .botones, .rgb-control { margin-top: 40px; display: flex; justify-content: center; flex-wrap: wrap; gap: 20px; }
 button { font-size: 24px; padding: 15px 30px; border: none; border-radius: 20px; cursor: pointer; color: white; transition: 0.3s; }
 button:hover { opacity: 0.8; }
+
+/* colores de botones de ventilador */
 .off { background: #888; }
 .low { background: #0af; }
 .medium { background: #06c; }
 .high { background: #00f; }
-.rgb-control button { background: #333; font-size: 20px; padding: 12px 24px; border-radius: 15px; }
-.rgb-control button:hover { background: #666; }
-input[type="color"] { width: 100px; height: 100px; border: none; cursor: pointer; }
-.alert-buttons { display: flex; justify-content: center; gap: 20px; margin-bottom: 30px; }
-.ayuda { background: #f90; }
-.sos { background: #c00; }
+
+/* niveles de luz en amarillo */
+.luz-off { background: #888; }       /* apagado: gris */
+.luz-media { background: #fbc02d; color: #fff; } /* amarillo medio */
+.luz-alta { background: #FFB500; color: #fff; }  /* amarillo oscuro */
+
+/* Botones de alerta, colores chulos y distintivos */
+.btn-ayuda { background: #4CAF50; color: #000 ; }   /* verde */
+.btn-sos { background: #4CAF50; color: #000 ; }       /* verde */
+.btn-pastillas { background: #FF8FB1 ; color: #000; } /* rosa */
+.btn-comida { background: #FF8FB1 ; color: #000; }   /* rosa */
+
+/* ALERTAS DE COMIDA Y PASTILLAS – ESTILO COHERENTE */
+.alert-reminder {
+    display: none;                  /* solo visible cuando toca */
+    background: #fff0f5;            /* fondo lila muy suave */
+    color: #6a0dad;                 /* texto morado, como los botones de persiana */
+    font-size: 28px;                 /* tamaño visible pero elegante */
+    font-weight: bold;
+    padding: 20px 30px;
+    margin: 20px auto;
+    width: 60%;
+    border-radius: 15px;
+    border: 2px solid #FF8FB1;  /* rosa suave */
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: background 0.3s, color 0.3s;
+}
+
+
+/* BOTONES PERSIANA MORADOS */
+.persiana-up  { background: #A582B8; color: #fff; }   /* morado claro */
+.persiana-mid { background: #8E56BA; color: #fff; }   /* morado medio */
+.persiana-down{ background: #7535B0; color: #fff; }   /* morado oscuro */
+
 </style>
 </head>
 <body>
 <h1>Control de la Casa en Tiempo Real</h1>
 
+<!-- DIV PRINCIPAL DE ESTADO -->
 <div id="estado" class="estado limpio">CARGANDO...</div>
 
+<!-- BOTONES DE ALERTA -->
 <div class="alert-buttons">
-    <button class="ayuda" onclick="sendAlert('ayuda')">AYUDA</button>
-    <button class="sos" onclick="sendAlert('sos')">SOS</button>
+    <button class="btn-ayuda" onclick="sendAlert('ayuda')">ENVIAR AYUDA</button> <!-- ayuda -->
+    <button class="btn-sos" onclick="sendAlert('sos')">SOS OK</button>             <!-- SOS -->
 </div>
 
+<div class="alert-buttons">
+    <button class="btn-pastillas" onclick="sendAlert('pastillas')">RECORDAR PASTILLAS</button> <!-- pastillas -->
+    <button class="btn-comida" onclick="sendAlert('comida')">RECORDAR COMIDA</button>         <!-- comida -->
+</div>
+
+<!-- ALERTAS VISIBLES -->
+<div id="alertPast" class="alert-reminder"> No ha tomado pastillas</div>
+<div id="alertComida" class="alert-reminder">🍽 No ha comido</div>
+
+<br><br>
+
+<!-- GRAFICAS DE DATOS EN TIEMPO REAL -->
 <div class="charts">
     <canvas id="chartGas"></canvas>
     <canvas id="chartLuz"></canvas>
@@ -139,134 +208,183 @@ input[type="color"] { width: 100px; height: 100px; border: none; cursor: pointer
 
 <h2>Control de Ventilador</h2>
 <div class="botones">
-    <button onclick="fetch('/fan/off')" class="off">Apagar</button>
-    <button onclick="fetch('/fan/low')" class="low">Velocidad Baja</button>
-    <button onclick="fetch('/fan/medium')" class="medium">Velocidad Media</button>
-    <button onclick="fetch('/fan/high')" class="high">Velocidad Alta</button>
+    <!-- botones de ventilador, cada uno envía petición fetch -->
+    <button onclick="sendAlert('fan/off')" class="off">Apagar</button>
+    <button onclick="sendAlert('fan/low')" class="low">Velocidad Baja</button>
+    <button onclick="sendAlert('fan/medium')" class="medium">Velocidad Media</button>
+    <button onclick="sendAlert('fan/high')" class="high">Velocidad Alta</button>
 </div>
 
-<h2>Control de LED RGB</h2>
-<div class="rgb-control">
-    <input type="color" id="colorPicker" value="#ff0000">
-    <button onclick="setColor()">Aplicar Color</button>
+<h2>Control de Luz</h2>
+<div class="botones">
+    <button class="luz-off" onclick="sendAlert('luz/off')">LUZ OFF</button>
+    <button class="luz-media" onclick="sendAlert('luz/medium')">LUZ MEDIA</button>
+    <button class="luz-alta" onclick="sendAlert('luz/high')">LUZ ALTA</button>
 </div>
-<div class="rgb-control">
-    <button onclick="setPreset('off')">Apagar</button>
-    <button onclick="setPreset('warm')">Luz cálida</button>
-    <button onclick="setPreset('white')">Luz blanca</button>
+
+<h2>Control de Persiana</h2>
+<div class="botones">
+    <button class="persiana-up" onclick="sendAlert('blind/up')">BAJADA</button>
+    <button class="persiana-mid" onclick="sendAlert('blind/mid')">MEDIA</button>
+    <button class="persiana-down" onclick="sendAlert('blind/down')">SUBIDA</button>
 </div>
 
 <script>
-const gGas = new Chart(document.getElementById('chartGas'), { type:'line', data:{labels:[], datasets:[{label:"GAS", borderColor:"#0f0", data:[]}]}} );
-const gLuz = new Chart(document.getElementById('chartLuz'), { type:'line', data:{labels:[], datasets:[{label:"LUZ", borderColor:"#ff0", data:[]}]}} );
-const gTemp = new Chart(document.getElementById('chartTemp'), { type:'line', data:{labels:[], datasets:[{label:"TEMP", borderColor:"#0af", data:[]}]} } );
+// ===================== GRÁFICAS CON TIEMPO REAL =====================
+const ctxGas  = document.getElementById('chartGas');
+const ctxLuz  = document.getElementById('chartLuz');
+const ctxTemp = document.getElementById('chartTemp');
 
-setInterval(async ()=>{
-    const r = await fetch("/data"); const d = await r.json();
-    gGas.data.labels = d.t; gGas.data.datasets[0].data = d.v; gGas.update();
-    gLuz.data.labels = d.t; gLuz.data.datasets[0].data = d.luz; gLuz.update();
-    gTemp.data.labels = d.t; gTemp.data.datasets[0].data = d.temp; gTemp.update();
+const opciones = {
+    type: 'line',
+    options: {
+        responsive: true,
+        animation: false,
+        plugins: { legend: { position: 'top' } },
+        scales: {
+            x: { ticks: { maxRotation: 0, maxTicksLimit: 8 }, grid: { display: false } },
+            y: { beginAtZero: true }
+        }
+    }
+};
 
-    document.getElementById("estado").textContent = d.e;
-    document.getElementById("estado").className = "estado " + (d.e.includes("GAS") ? "gas" : "limpio");
-},500);
+// Crear las 3 gráficas (muy corto)
+const charts = {
+    gas:  new Chart(ctxGas,  { ...opciones, data: { labels: [], datasets: [{ label: 'Gas',  data: [], borderColor: '#2196F3', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { max: 4095 } } } }),
+    luz:  new Chart(ctxLuz,  { ...opciones, data: { labels: [], datasets: [{ label: 'Luz',  data: [], borderColor: '#FF9800', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { max: 1023 } } } }),
+    temp: new Chart(ctxTemp, { ...opciones, data: { labels: [], datasets: [{ label: 'Temp °C', data: [], borderColor: '#F44336', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { min: 15, max: 40 } } } })
+};
 
-async function sendAlert(tipo){
-    try {
-        const res = await fetch(`/${tipo}`);
-        const text = await res.text();
-        alert(text);
-        setTimeout(()=>fetch("/reset_alert?tipo=" + tipo),2000);
-    } catch(err){ console.error(err); }
-}
+// ===================== ACTUALIZACIÓN CADA 500ms (¡SÚPER SIMPLE!) =====================
+setInterval(async () => {
+    const d = await (await fetch("/data")).json();
+    const hora = new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 
-function setColor(){
-    const c = document.getElementById("colorPicker").value;
-    fetch(`/rgb?color=${c}`);
-}
-function setPreset(t){
-    let c="#000000"; if(t=="warm") c="#FFD080"; if(t=="white") c="#FFFFFF";
-    fetch(`/rgb?color=${c}`);
+    // Actualizar estado y alertas
+    const estado = document.getElementById("estado");
+    estado.textContent = d.sos ? "SOS ACTIVADO" : d.ayuda ? "AYUDA PEDIDA" : d.e;
+    estado.className = "estado " + (d.sos || d.ayuda || d.e.includes("GAS") ? "gas" : "limpio");
+
+    document.getElementById("alertPast").style.display = d.pastillas ? "block" : "none";
+    document.getElementById("alertComida").style.display = d.comida ? "block" : "none";
+
+    // Añadir nuevo punto a las 3 gráficas
+    const ultimo = { x: hora, y: 0 };
+    charts.gas.data.labels.push(hora);   charts.gas.data.datasets[0].data.push(d.v.at(-1)  || 0);
+    charts.luz.data.labels.push(hora);   charts.luz.data.datasets[0].data.push(d.luz.at(-1) || 0);
+    charts.temp.data.labels.push(hora);  charts.temp.data.datasets[0].data.push(d.temp.at(-1)|| 0);
+
+    // Mantener solo 200 puntos
+    if (charts.gas.data.labels.length > 200) {
+        ["gas","luz","temp"].forEach(t => {
+            charts[t].data.labels.shift();
+            charts[t].data.datasets[0].data.shift();
+        });
+    }
+
+    // Actualizar (sin animación)
+    Object.values(charts).forEach(c => c.update('none'));
+}, 500);
+
+// ===================== ENVÍO DE ALERTAS =====================
+async function sendAlert(tipo) {
+    try { alert(await (await fetch(`/${tipo}`)).text()); }
+    catch(e) { console.error(e); }
 }
 </script>
 </body>
 </html>
 '''
-
 # ====================== RUTAS DE CONTROL ======================
-@app.route("/reset_alert")
-def reset_alert():
-    global ayuda, sos
-    tipo = request.args.get("tipo")
-    if tipo == "ayuda": ayuda = 0
-    elif tipo == "sos": sos = 0
-    return "OK"
 
-@app.route("/ayuda")
+@mi_app.route("/ayuda")
 def enviar_ayuda():
-    global ayuda
-    ser.write(b'I')
-    ayuda = 1
-    return "AYUDA enviada"
+    puerto_serial.write(b'A')   # micro decide qué hacer
+    return "AYUDA ENVIADA"
 
-@app.route("/sos")
+@mi_app.route("/sos")
 def enviar_sos():
-    global sos
-    ser.write(b'S')
-    sos = 1
-    return "SOS enviada"
+    puerto_serial.write(b'S')
+    return "SOS ENVIADO"
 
-@app.route("/fan/off")
-def fan_off():
-    ser.write(b'0')
+@mi_app.route("/pastillas")
+def enviar_pastillas():
+    puerto_serial.write(b'P')
+    return "Aviso de pastillas enviado"
+
+@mi_app.route("/comida")
+def enviar_comida():
+    puerto_serial.write(b'C')
+    return "Aviso de comida enviado"
+
+# ==== CONTROL VENTILADOR ====
+@mi_app.route("/fan/off")
+def fan_apagar():
+    puerto_serial.write(b'O')
     return "Ventilador apagado"
 
-@app.route("/fan/low")
-def fan_low():
-    ser.write(b'L')
+@mi_app.route("/fan/low")
+def fan_baja():
+    puerto_serial.write(b'L')
     return "Ventilador velocidad baja"
 
-@app.route("/fan/medium")
-def fan_medium():
-    ser.write(b'R')
+@mi_app.route("/fan/medium")
+def fan_media():
+    puerto_serial.write(b'R')
     return "Ventilador velocidad media"
 
-@app.route("/fan/high")
-def fan_high():
-    ser.write(b'B')
+@mi_app.route("/fan/high")
+def fan_alta():
+    puerto_serial.write(b'B')
     return "Ventilador velocidad alta"
 
-@app.route("/rgb")
-def rgb():
-    color = request.args.get("color", "#000000")
-    try:
-        r = int(color[1:3],16)
-        g = int(color[3:5],16)
-        b = int(color[5:7],16)
-        comando = f'R{r:03}G{g:03}B{b:03}'
-        ser.write(comando.encode())
-        return f"Color enviado: {comando}"
-    except:
-        return "Color inválido",400
+# ==== CONTROL LUZ ====
+@mi_app.route("/luz/off")
+def luz_apagar():
+    puerto_serial.write(b'N')  # comando Tiva luz OFF
+    return "Luz apagada"
+
+@mi_app.route("/luz/medium")
+def luz_media():
+    puerto_serial.write(b'I')  # comando Tiva luz media
+    return "Luz media"
+
+@mi_app.route("/luz/high")
+def luz_alta():
+    puerto_serial.write(b'M')  # comando Tiva luz alta
+    return "Luz alta"
+
+# === CONTROL PERSIANAS
+@mi_app.route("/blind/up")
+def persiana_subir():
+    puerto_serial.write(b'U')
+    return "Persiana subiendo"
+
+@mi_app.route("/blind/mid")
+def persiana_medio():
+    puerto_serial.write(b'M')
+    return "Persiana a mitad"
+
+@mi_app.route("/blind/down")
+def persiana_bajar():
+    puerto_serial.write(b'D')
+    return "Persiana bajando"
+
 
 # ====================== RUTA DE DATOS JSON ======================
-@app.route("/data")
-def data():
-    max_len = max(len(datos_adc), len(datos_temp), len(datos_humo), len(datos_luz), 1)
+@mi_app.route("/data")
+def endpoint_datos():
     return jsonify({
-        "t": list(range(max_len)),
-        "v": datos_adc.copy(),
-        "temp": datos_temp.copy(),
-        "luz": datos_luz.copy(),
+        "v": gas_adcc.copy(),
+        "luz": luz.copy(),
+        "temp": temp.copy(),
         "e": estado_actual,
-        "puerta": puerta,
         "ayuda": ayuda,
         "sos": sos,
         "comida": comida,
-        "pastillas": past,
-        "persona": persona
+        "pastillas": pastillas
     })
 
-# ====================== INICIO ======================
-threading.Thread(target=lector_tiva, daemon=True).start()
-app.run(host="0.0.0.0", port=5000)
+# ====================== INICIO DEL HILO Y DEL SERVIDOR ======================
+threading.Thread(target=hilo_lector_tiva, daemon=True).start()
+mi_app.run(host="0.0.0.0", port=5000)
