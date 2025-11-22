@@ -163,7 +163,7 @@ int cuenta_pastilla=0;
 int estado_comida=0;
 int cuenta_comida=0;
 
-
+char num='a';
 
 //------------------------------------------------------------------- SLEEP / ISR
 
@@ -288,15 +288,15 @@ int main(void)
     while (1)
     {
         SLEEP; // 50 ms
+        DatosPantalla();
+        ComandosWeb();
         cuenta++;
         if (cuenta>20){ // Cada 1s
             cuenta=0;
             humo_Detectar();
             puerta_Detectar();
             lee_sensores();
-            Servo(ang);
-            DatosPantalla();
-            ComandosWeb();
+
             /** Maquina de estado Luz----------------------------------------------------------------------------------------------------------------*/
             switch(estado_luz){
             case 0:
@@ -500,6 +500,7 @@ int main(void)
                 break;
             }
             Estado_uart();
+            Servo(ang);
         }
         static uint32_t contador = 0;
         contador++;
@@ -1120,44 +1121,97 @@ void DatosPantalla(void)
 
 void ComandosWeb(void)
 {
-    if (UARTCharsAvail(UART0_BASE)&&(UARTCharGetNonBlocking(UART0_BASE)=='N')){
-        lampara = 0;
-        manual_l=0;
-        estado_luz=0;
+    if (UARTCharsAvail(UART0_BASE)){
+        num=UARTCharGetNonBlocking(UART0_BASE);
+        UARTCharPutNonBlocking(UART0_BASE, num);
+        if(num=='N'){
+            lampara = 0;
+            manual_l=0;
+            estado_luz=0;
+        }
     }
-    if (UARTCharsAvail(UART0_BASE)&&(UARTCharGetNonBlocking(UART0_BASE)=='I')){
-        lampara = 1;
-        manual_l=1;
-        estado_luz=1;
+    if (UARTCharsAvail(UART0_BASE)){
+        num=UARTCharGetNonBlocking(UART0_BASE);
+        UARTCharPutNonBlocking(UART0_BASE, num);
+        if(num=='I'){
+            lampara = 1;
+            manual_l=1;
+            estado_luz=1;
+        }
     }
-    if (UARTCharsAvail(UART0_BASE)&&(UARTCharGetNonBlocking(UART0_BASE)=='M')){
-        lampara = 1;
-        manual_l=1;
-        estado_luz=2;
+    if (UARTCharsAvail(UART0_BASE)){
+        num=UARTCharGetNonBlocking(UART0_BASE);
+        UARTCharPutNonBlocking(UART0_BASE, num);
+        if(num=='M'){
+            lampara = 1;
+            manual_l=1;
+            estado_luz=2;
+        }
     }
-    if (UARTCharsAvail(UART0_BASE)&&(UARTCharGetNonBlocking(UART0_BASE)=='B')){
-        ventilador = 1;
-        manual_v=1;
-        estado_ventilador=3;
+    if (UARTCharsAvail(UART0_BASE)){
+        num=UARTCharGetNonBlocking(UART0_BASE);
+        UARTCharPutNonBlocking(UART0_BASE, num);
+        if(num=='B'){
+            ventilador = 1;
+            manual_v=1;
+            estado_ventilador=3;
+        }
     }
-    if (UARTCharsAvail(UART0_BASE)&&(UARTCharGetNonBlocking(UART0_BASE)=='R')){
-        ventilador = 1;
-        manual_v=1;
-        estado_ventilador=2;
+    if (UARTCharsAvail(UART0_BASE)){
+        num=UARTCharGetNonBlocking(UART0_BASE);
+        UARTCharPutNonBlocking(UART0_BASE, num);
+        if(num=='R'){
+            ventilador = 1;
+            manual_v=1;
+            estado_ventilador=2;
+        }
     }
-    if (UARTCharsAvail(UART0_BASE)&&(UARTCharGetNonBlocking(UART0_BASE)=='L')){
-        ventilador = 1;
-        manual_v=1;
-        estado_ventilador=1;
+    if (UARTCharsAvail(UART0_BASE)){
+        num=UARTCharGetNonBlocking(UART0_BASE);
+        UARTCharPutNonBlocking(UART0_BASE, num);
+        if(num=='L'){
+            ventilador = 1;
+            manual_v=1;
+            estado_ventilador=1;
+        }
     }
-    if (UARTCharsAvail(UART0_BASE)&&(UARTCharGetNonBlocking(UART0_BASE)=='O')){
-        ventilador = 1;
-        manual_v=1;
-        estado_ventilador=0;
-    }
-    if (UARTCharsAvail(UART0_BASE)&&(UARTCharGetNonBlocking(UART0_BASE)=='A')){
-        MandaMensaje("Ayuda en camino");
-        ayuda=0;
+    if (UARTCharsAvail(UART0_BASE)){
+            num=UARTCharGetNonBlocking(UART0_BASE);
+            UARTCharPutNonBlocking(UART0_BASE, num);
+            if(num=='O'){
+                ventilador = 1;
+                        manual_v=1;
+                        estado_ventilador=0;
+            }
+        }
+    if (UARTCharsAvail(UART0_BASE)){
+               num=UARTCharGetNonBlocking(UART0_BASE);
+               UARTCharPutNonBlocking(UART0_BASE, num);
+               if(num=='P'){
+                   pastilla=1;
+               }
+           }
+    if (UARTCharsAvail(UART0_BASE)){
+                   num=UARTCharGetNonBlocking(UART0_BASE);
+                   UARTCharPutNonBlocking(UART0_BASE, num);
+                   if(num=='C'){
+                       comida=1;
+                   }
+               }
+
+    if (UARTCharsAvail(UART0_BASE)){
+        num=UARTCharGetNonBlocking(UART0_BASE);
+        UARTCharPutNonBlocking(UART0_BASE, num);
+        if(num=='A'){
+            MandaMensaje("Ayuda en camino");
+            ayuda=0;}
     }
 
+    if (UARTCharsAvail(UART0_BASE)){
+            num=UARTCharGetNonBlocking(UART0_BASE);
+            UARTCharPutNonBlocking(UART0_BASE, num);
+            if(num=='S'){
+                MandaMensaje("Ayuda en camino");
+                emergencia=0;}
+        }
 }
