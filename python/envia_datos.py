@@ -12,7 +12,7 @@ import re  # expresiones regulares para parsear las líneas
 mi_app = Flask(__name__)
 
 # ==== CONFIG SERIAL Y ARCHIVO ====
-mi_puerto = "COM6"  # puerto donde está la Tiva
+mi_puerto = "COM4"  # puerto donde está la Tiva
 mi_archivo = r"C:\Users\aledi\Desktop\live_data.txt"  # donde guardamos los datos
 
 # abrir puerto serie con baudrate 115200
@@ -259,7 +259,7 @@ const opciones = {
 
 // Crear las 3 gráficas (muy corto)
 const charts = {
-    gas:  new Chart(ctxGas,  { ...opciones, data: { labels: [], datasets: [{ label: 'Gas',  data: [], borderColor: '#2196F3', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { max: 3000 } } } }),
+    gas:  new Chart(ctxGas,  { ...opciones, data: { labels: [], datasets: [{ label: 'Gas',  data: [], borderColor: '#2196F3', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { max: 1023 } } } }),
     luz:  new Chart(ctxLuz,  { ...opciones, data: { labels: [], datasets: [{ label: 'Luz',  data: [], borderColor: '#FF9800', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { max: 4000 } } } }),
     temp: new Chart(ctxTemp, { ...opciones, data: { labels: [], datasets: [{ label: 'Temp °C', data: [], borderColor: '#F44336', tension: 0.3 }] }, options: { ...opciones.options, scales: { ...opciones.options.scales, y: { min: 10, max: 40 } } } })
 };
