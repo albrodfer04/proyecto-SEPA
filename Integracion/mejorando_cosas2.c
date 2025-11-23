@@ -382,7 +382,7 @@ int main(void)
                 motor_Direccion(0);
                 motor_Velocidad(0);
                 motor_Encendido_Apagado(0);
-                if(ventilador && !manual_v) estado_ventilador=1;
+                if(ventilador) estado_ventilador=1;
                 else if(T_act>U_Temp_MAX && !manual_v){ //primeros encendemos a bajo
                     ventilador=1;
                     estado_ventilador=1;
@@ -393,7 +393,7 @@ int main(void)
                 motor_Direccion(0);
                 motor_Velocidad(20);
                 motor_Encendido_Apagado(1);
-                if(!ventilador&& !manual_v) estado_ventilador=0;
+                if(!ventilador) estado_ventilador=0;
                 else if(T_act>U_Temp_MAX && !manual_v){
                     cuenta_vent++;
                     if(cuenta_vent>50){
@@ -410,7 +410,7 @@ int main(void)
                 motor_Direccion(0);
                 motor_Velocidad(35);
                 motor_Encendido_Apagado(1);
-                if(!ventilador&& !manual_v) estado_ventilador=0;
+                if(!ventilador) estado_ventilador=0;
                 else if(T_act>U_Temp_MAX && !manual_v){
                     cuenta_vent++;
                     if(cuenta_vent>50){
@@ -425,7 +425,7 @@ int main(void)
                 motor_Direccion(0);
                 motor_Velocidad(50);
                 motor_Encendido_Apagado(1);
-                if(!ventilador && !manual_v) estado_ventilador=0;
+                if(!ventilador) estado_ventilador=0;
                 else if(T_act<U_Temp_MIN && !manual_v) estado_ventilador--;
                 break;
             }
@@ -458,7 +458,7 @@ int main(void)
                         estado_persianas=0;
                     }
                 }
-                //añadir que se bajen desde web
+                //aï¿½adir que se bajen desde web
                 break;
             case 2:
                 ang = 180;
