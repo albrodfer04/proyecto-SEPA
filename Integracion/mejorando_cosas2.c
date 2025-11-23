@@ -70,13 +70,11 @@
 #define LA          69
 #define SI          71
 
-
 //------------------------------------------------------------------- VARIABLES GLOBALES
 int RELOJ;
 volatile int Flag_ints = 0;
 const int FREC_TIMER = 20;        // 50 ms
 int Load;
-int hora;
 int cuenta;
 
 /* DETECTOR DE HUMOS */
@@ -84,33 +82,33 @@ uint32_t adcValue;
 volatile int preheating = 0;
 const int PREHEAT_TICKS = 600; // 30 segundos (600 * 50 ms)
 bool gasDetectadoAnag; // salida analogica
-bool gasDetected;      // salida digital
 
 /* MOTOR ventilador */
 const int FREC_PWM = 1000; /* PWM: 1 kHz */
 int estado_ventilador=0;
 int cuenta_vent;
+bool manual_v;
 #define U_Temp_MAX 28
 #define U_Temp_MIN 24
-bool manual_v;
-bool manual_l;
 
 /* IMAN */
 char puerta_abierta; // estado de puerta
 int persona=0;
 int cuenta_puerta=0;
 int estado_persona=0;
+
 /* LED */
 int Dutymax = 255;
 int Dutymin = 0;
 int estado_luz=0;
-int estado_luz_ant=0;
+bool manual_l;
 int cuenta_led=0;
 #define U_LUZ_MIN 50
 #define U_LUZ_MAX 500
 
 /* SENSORES TEMPERATURA Y LUZ */
 int DevID = 0;
+
 /* OPT3001 */
 float lux;
 int lux_i;
@@ -125,8 +123,8 @@ bool BME_on = true;
 
 /* inicializacion sensores */
 uint8_t Sensor_OK = 0;
-#define BP 2
 uint8_t Opt_OK, Bme_OK;
+#define BP 2
 
 /* SERVO */
 volatile int Max_pos = 4200; // 3750
@@ -176,7 +174,7 @@ char num='a';
 void SysCtlSleepFake(void)
 {
     while (!Flag_ints);
-    Flag_ints = 0;
+        Flag_ints = 0;
 }
 
 #define SLEEP SysCtlSleepFake()
@@ -228,7 +226,6 @@ void Servo_inic(void);
 void Servo(int angulo_objetivo);
 
 /* Pantalla FT800 */
-
 void inicia_pantalla(void);
 void dibuja_pantalla(void);
 void MandaMensaje(char *s);
@@ -317,14 +314,16 @@ int main(void)
                 if(lampara==0) estado_luz=0;
                 else if(lux>U_LUZ_MAX && !manual_l){
                     lampara=0;
-                    estado_luz=0;}
+                    estado_luz=0;
+                }
                 break;
             case 2:
                 led(255,255,255);
                 if(!lampara){estado_luz=0;}
                 else if(lux>U_LUZ_MAX && !manual_l){
                     lampara=0;
-                    estado_luz=0;}
+                    estado_luz=0;
+                }
                 break;
             }
 
@@ -382,7 +381,8 @@ int main(void)
                 motor_Direccion(0);
                 motor_Velocidad(0);
                 motor_Encendido_Apagado(0);
-                if(ventilador) estado_ventilador=1;
+                if(ventilador) 
+                    estado_ventilador=1;
                 else if(T_act>U_Temp_MAX && !manual_v){ //primeros encendemos a bajo
                     ventilador=1;
                     estado_ventilador=1;
@@ -393,7 +393,8 @@ int main(void)
                 motor_Direccion(0);
                 motor_Velocidad(20);
                 motor_Encendido_Apagado(1);
-                if(!ventilador) estado_ventilador=0;
+                if(!ventilador) 
+                    estado_ventilador=0;
                 else if(T_act>U_Temp_MAX && !manual_v){
                     cuenta_vent++;
                     if(cuenta_vent>50){
@@ -410,23 +411,26 @@ int main(void)
                 motor_Direccion(0);
                 motor_Velocidad(35);
                 motor_Encendido_Apagado(1);
-                if(!ventilador) estado_ventilador=0;
+                if(!ventilador) 
+                    estado_ventilador=0;
                 else if(T_act>U_Temp_MAX && !manual_v){
                     cuenta_vent++;
                     if(cuenta_vent>50){
                         estado_ventilador++;
                         cuenta_vent=0;
                     }
-
                 }
-                else if(T_act<U_Temp_MIN && !manual_v) estado_ventilador--;
+                else if(T_act<U_Temp_MIN && !manual_v) 
+                    estado_ventilador--;
                 break;
             case 3:
                 motor_Direccion(0);
                 motor_Velocidad(50);
                 motor_Encendido_Apagado(1);
-                if(!ventilador) estado_ventilador=0;
-                else if(T_act<U_Temp_MIN && !manual_v) estado_ventilador--;
+                if(!ventilador) 
+                    estado_ventilador=0;
+                else if(T_act<U_Temp_MIN && !manual_v) 
+                    estado_ventilador--;
                 break;
             }
 
@@ -436,34 +440,28 @@ int main(void)
             case 0: //bajadas
                 ang = 0;
                 if((lux<U_LUZ_MIN)&& !manual_p) //poca luz y es de dia
-                {
                     estado_persianas=1;
-                }
                 break;
             case 1:
                 ang = 90;
-                if((lux<U_LUZ_MIN) && !manual_p) //poca luz y es de dia
-                {
+                if((lux<U_LUZ_MIN) && !manual_p){ //poca luz y es de dia
                     cuenta_per++;
                     if(cuenta_per>=5){
                         cuenta_per=0;
                         estado_persianas=2;
                     }
                 }
-                else if((lux>U_LUZ_MAX) && !manual_p) //mucha luz y es de dia
-                {
+                else if((lux>U_LUZ_MAX) && !manual_p){ //mucha luz y es de dia                
                     cuenta_per++;
                     if(cuenta_per>=5){
                         cuenta_per=0;
                         estado_persianas=0;
                     }
                 }
-                //a�adir que se bajen desde web
                 break;
             case 2:
                 ang = 180;
-                if((lux>U_LUZ_MAX) && !manual_p) //mucha luz y es de dia
-                {
+                if((lux>U_LUZ_MAX) && !manual_p){ //mucha luz y es de dia                
                     cuenta_per++;
                     if(cuenta_per>=5){
                         cuenta_per=0;
@@ -539,36 +537,29 @@ void led_Inicializar_Pines(void)
  */
 void led(int DutyRojo, int DutyVerde, int DutyAzul)
 {
-    if (DutyRojo <= Dutymin)
-    {
+    if (DutyRojo <= Dutymin)    
         PWMOutputState(PWM0_BASE, PWM_OUT_5_BIT, false);
-    }
-    else
-    {
+    else{
         PWMOutputState(PWM0_BASE, PWM_OUT_5_BIT, true);
         if (DutyRojo >= Dutymax)
             DutyRojo = Dutymax;
         PWMPulseWidthSet(PWM0_BASE, PWM_OUT_5, DutyRojo);
     }
 
-    if (DutyVerde <= Dutymin)
-    {
+    if (DutyVerde <= Dutymin){
         PWMOutputState(PWM0_BASE, PWM_OUT_6_BIT, false);
     }
-    else
-    {
+    else{
         PWMOutputState(PWM0_BASE, PWM_OUT_6_BIT, true);
         if (DutyVerde >= Dutymax)
             DutyVerde = Dutymax;
         PWMPulseWidthSet(PWM0_BASE, PWM_OUT_6, DutyVerde);
     }
 
-    if (DutyAzul <= Dutymin)
-    {
+    if (DutyAzul <= Dutymin){
         PWMOutputState(PWM0_BASE, PWM_OUT_7_BIT, false);
     }
-    else
-    {
+    else{
         PWMOutputState(PWM0_BASE, PWM_OUT_7_BIT, true);
         if (DutyAzul >= Dutymax)
             DutyAzul = Dutymax;
@@ -576,12 +567,10 @@ void led(int DutyRojo, int DutyVerde, int DutyAzul)
     }
 }
 
-
 /**
  * @brief Configura el pin PA7 como entrada digital con pull-up.
  */
-void puerta_Configurar_Pines(void)
-{
+void puerta_Configurar_Pines(void){
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
     GPIOPinTypeGPIOInput(GPIO_PORTA_BASE, GPIO_PIN_7);
     GPIOPadConfigSet(GPIO_PORTA_BASE, GPIO_PIN_7, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);
@@ -592,17 +581,12 @@ void puerta_Configurar_Pines(void)
  *
  * Actualiza la variable global puerta_abierta.
  */
-void puerta_Detectar(void)
-{
+void puerta_Detectar(void){
     puerta_abierta = GPIOPinRead(GPIO_PORTA_BASE, GPIO_PIN_7); // lee PA7
     if (puerta_abierta)
-    {
         UARTprintf("PA  ");
-    }
     else
-    {
         UARTprintf("PC  ");
-    }
 }
 
 
@@ -634,13 +618,11 @@ void motor_Configurar_Pines(void)
  */
 void motor_Direccion(uint8_t dir)
 {
-    if (dir == 0)
-    {
+    if (dir == 0){
         GPIOPinWrite(GPIO_PORTC_BASE, GPIO_PIN_6, GPIO_PIN_6);
         GPIOPinWrite(GPIO_PORTC_BASE, GPIO_PIN_7, 0);
     }
-    else
-    {
+    else{
         GPIOPinWrite(GPIO_PORTC_BASE, GPIO_PIN_6, 0);
         GPIOPinWrite(GPIO_PORTC_BASE, GPIO_PIN_7, GPIO_PIN_7);
     }
@@ -678,8 +660,7 @@ void motor_Velocidad(uint8_t porcentaje)
  */
 void humo_Precalentar(void)
 {
-    while (preheating < PREHEAT_TICKS)
-    {
+    while (preheating < PREHEAT_TICKS){
         SLEEP;
         preheating++;
         if ((preheating % 20) == 0) // cada segundo
@@ -770,24 +751,21 @@ void Reloj_inicializacion(void)
  */
 void sensores_booster_inic(void)
 {
-    if (Detecta_BP(1))
-    {
+    if (Detecta_BP(1)){
         UARTprintf("\n--------------------------------------");
         UARTprintf("\n  BOOSTERPACK detectado en posicion 1");
         UARTprintf("\n   Configurando puerto I2C0");
         UARTprintf("\n--------------------------------------");
         Conf_Boosterpack(1, RELOJ);
     }
-    else if (Detecta_BP(2))
-    {
+    else if (Detecta_BP(2)){
         UARTprintf("\n--------------------------------------");
         UARTprintf("\n  BOOSTERPACK detectado en posicion 2");
         UARTprintf("\n   Configurando puerto I2C2");
         UARTprintf("\n--------------------------------------");
         Conf_Boosterpack(2, RELOJ);
     }
-    else
-    {
+    else{
         UARTprintf("\n--------------------------------------");
         UARTprintf("\n  Ningun BOOSTERPACK detectado   :-/  ");
         UARTprintf("\n              Saliendo");
@@ -796,13 +774,11 @@ void sensores_booster_inic(void)
 
     UARTprintf("\033[2J \033[1;1H Inicializando OPT3001... ");
     Sensor_OK = Test_I2C_Dir(OPT3001_SLAVE_ADDRESS);
-    if (!Sensor_OK)
-    {
+    if (!Sensor_OK){
         UARTprintf("Error en OPT3001\n");
         Opt_OK = 0;
     }
-    else
-    {
+    else{
         OPT3001_init();
         UARTprintf("Hecho!\n");
         UARTprintf("Leyendo DevID... ");
@@ -813,13 +789,11 @@ void sensores_booster_inic(void)
 
     UARTprintf("Inicializando BME280... ");
     Sensor_OK = Test_I2C_Dir(BME280_I2C_ADDRESS2);
-    if (!Sensor_OK)
-    {
+    if (!Sensor_OK){
         UARTprintf("Error en BME280\n");
         Bme_OK = 0;
     }
-    else
-    {
+    else{
         bme280_data_readout_template();
         bme280_set_power_mode(BME280_NORMAL_MODE);
         UARTprintf("Hecho! \nLeyendo DevID... ");
@@ -839,17 +813,14 @@ void lee_sensores(void)
 {
 
     char buffer_local[32];
-    if (Opt_OK)
-    {
+    if (Opt_OK){
         lux = OPT3001_getLux();
         lux_i = (int)round(lux);
         UARTprintf("LUZ: %d ", lux_i);
     }
-    if (Bme_OK)
-    {
+    if (Bme_OK){
         returnRslt = bme280_read_pressure_temperature_humidity(&g_u32ActualPress, &g_s32ActualTemp, &g_u32ActualHumity);
         T_act = (float)g_s32ActualTemp / 100.0f;
-
         sprintf(buffer_local, "T: %.2f", T_act);
         UARTprintf("%s ", buffer_local);
     }
@@ -889,14 +860,12 @@ void Servo(int angulo_objetivo)
     if (angulo_objetivo < 0)
         angulo_objetivo = 0;
 
-    if (pos_180 < angulo_objetivo)
-    {
+    if (pos_180 < angulo_objetivo){
         pos_180 += paso;
         if (pos_180 > angulo_objetivo)
             pos_180 = angulo_objetivo;
     }
-    else if (pos_180 > angulo_objetivo)
-    {
+    else if (pos_180 > angulo_objetivo){
         pos_180 -= paso;
         if (pos_180 < angulo_objetivo)
             pos_180 = angulo_objetivo;
@@ -907,7 +876,6 @@ void Servo(int angulo_objetivo)
     posicion = Min_pos + ((Max_pos - Min_pos) * pos_180) / 180;
     PWMPulseWidthSet(PWM0_BASE, PWM_OUT_1, posicion);
 }
-
 
 /**
  * @brief Inicializa la pantalla FT800 por SPI.
@@ -939,13 +907,11 @@ void dibuja_pantalla(void)
 void MandaMensaje(char *s)
 {
     cont++;
-    if (cont > 2)
-    {
+    if (cont > 2){
         strcpy(buffer[0], buffer[1]);
         strcpy(buffer[1], s);
     }
-    else
-    {
+    else{
         strcpy(buffer[cont - 1], s);
     }
 }
@@ -999,25 +965,21 @@ void DibujaBotones(void)
     ComColor(255, 255, 255);
     Boton(HSIZE / 4 + 10, VSIZE / 2 + 20, HSIZE / 5, HSIZE / 5, 28, "SOS");
 
-    if (lampara == 0)
-    {
+    if (lampara == 0){
         ComFgcolor(120, 120, 120);
         ComColor(255, 255, 255);
     }
-    else
-    {
+    else{
         ComFgcolor(255, 196, 96);
         ComColor(0, 0, 0);
     }
     Boton(HSIZE * 8 / 15, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "LUZ");
 
-    if (ventilador == 0)
-    {
+    if (ventilador == 0){
         ComFgcolor(120, 120, 120);
         ComColor(255, 255, 255);
     }
-    else
-    {
+    else{
         ComFgcolor(65, 162, 216);
         ComColor(0, 0, 0);
     }
@@ -1043,8 +1005,7 @@ void DibujaBotones(void)
  */
 void DatosPantalla(void)
 {
-    if (Boton(HSIZE * 4 / 5, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "AIRE"))
-    {
+    if (Boton(HSIZE * 4 / 5, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "AIRE")){
         SysCtlDelay(10 * MSEC);
         while (Boton(HSIZE * 4 / 5, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "AIRE")); // Debouncing
         SysCtlDelay(10 * MSEC);
@@ -1052,8 +1013,7 @@ void DatosPantalla(void)
         manual_v=!manual_v;
     }
 
-    if (Boton(HSIZE * 7 / 12, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "LUZ"))
-    {
+    if (Boton(HSIZE * 7 / 12, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "LUZ")){
         SysCtlDelay(10 * MSEC);
         while (Boton(HSIZE * 7 / 12, VSIZE / 2 + 30, HSIZE / 6 + 5, HSIZE / 6 + 5, 28, "LUZ")); // Debouncing
         SysCtlDelay(10 * MSEC);
