@@ -387,7 +387,7 @@ def persiana_medio():
 
 @mi_app.route("/blind/down")
 def persiana_bajar():
-    puerto_serial.write(b'U')
+    puerto_serial.write(b'U.')
     return "Persiana bajando"
 
 # ====================== RUTA DE DATOS JSON ======================
