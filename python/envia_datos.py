@@ -380,6 +380,8 @@ def persiana_subir():
     puerto_serial.write(b'D')
     return "Persiana subiendo"
 
+
+
 @mi_app.route("/blind/mid")
 def persiana_medio():
     puerto_serial.write(b'Z')
