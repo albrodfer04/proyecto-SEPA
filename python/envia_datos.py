@@ -89,8 +89,7 @@ def hilo_lector_tiva():
 @mi_app.route("/")
 def pagina_web():
     # aqui va todo el HTML/JS/CSS 
-    return
-'''
+    return '''
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -376,7 +375,7 @@ def persiana_medio():
 
 @mi_app.route("/blind/down")
 def persiana_bajar():
-    puerto_serial.write(b'U.')
+    puerto_serial.write(b'U')
     return "Persiana subiendo"
 
 #  RUTA DE DATOS JSON 
