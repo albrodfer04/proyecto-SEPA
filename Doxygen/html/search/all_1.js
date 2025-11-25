@@ -1,6 +1,9 @@
 var searchData=
 [
-  ['humo_5fdetectar_0',['humo_Detectar',['../_integracion__pantalla__documentado_8c.html#a7c5807bc5365e226f047aae4eb7cf1e1',1,'Integracion_pantalla_documentado.c']]],
-  ['humo_5finicializar_5fpines_1',['humo_Inicializar_Pines',['../_integracion__pantalla__documentado_8c.html#a35441a1fc7f64e69730e47575370f613',1,'Integracion_pantalla_documentado.c']]],
-  ['humo_5fprecalentar_2',['humo_Precalentar',['../_integracion__pantalla__documentado_8c.html#a5de242fd78783f909185758b19e26d94',1,'Integracion_pantalla_documentado.c']]]
+  ['datospantalla_0',['DatosPantalla',['../proyecto__final_8c.html#ae0bce10ff1544af7de342615a8a663da',1,'proyecto_final.c']]],
+  ['de_20pines_20utilizados_1',['Mapa de pines utilizados',['../proyecto__final_8c.html#mapa_de_pines',1,'']]],
+  ['dibuja_5fpantalla_2',['dibuja_pantalla',['../proyecto__final_8c.html#ada16c04b6f4118c8f0d7ad8a400ac5b6',1,'proyecto_final.c']]],
+  ['dibujabotones_3',['DibujaBotones',['../proyecto__final_8c.html#a8c8787c85cd0735105c257a15a8edd78',1,'proyecto_final.c']]],
+  ['dibujamensaje_4',['DibujaMensaje',['../proyecto__final_8c.html#a08c8d46dc6a7ff7601f0f50012578297',1,'proyecto_final.c']]],
+  ['dibujarecordatorios_5',['DibujaRecordatorios',['../proyecto__final_8c.html#afc25f0d3b85ff4769fa96f13d576b6a5',1,'proyecto_final.c']]]
 ];

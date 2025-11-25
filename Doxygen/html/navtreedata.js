@@ -24,7 +24,7 @@
 */
 var NAVTREE =
 [
-  [ "Domotica inclusiva", "index.html", [
+  [ "Domótica para personas mayores", "index.html", [
     [ "Files", "files.html", [
       [ "File List", "files.html", "files_dup" ],
       [ "Globals", "globals.html", [
@@ -37,7 +37,7 @@ var NAVTREE =
 
 var NAVTREEINDEX =
 [
-"_integracion__pantalla__documentado_8c.html"
+"dir_68267d1309a1af8e8297ef4c3efbcdba.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronization';

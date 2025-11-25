@@ -1,5 +1,5 @@
 /**
- * @file Integracion_pantalla_documentado.c
+ * @file proyecto_final.c
  * @brief Sistema integrado: sensores, pantalla FT800, servo, motor, LED RGB y UART.
  *
  * Implementa:
@@ -55,13 +55,13 @@
 #include <string.h>
 #include <stdlib.h>
 
-// === Instrumentos ===
+/*Instrumentos*/
 #define PIANO       70
 #define ALARMA      6
 #define TROMPETA    69
 #define SILENCIO    0
 
-// === Notas ===
+/* Notas*/
 #define DO          60
 #define RE          62
 #define MI          64
@@ -77,13 +77,13 @@ const int FREC_TIMER = 20;        // 50 ms
 int Load;
 int cuenta;
 
-/* DETECTOR DE HUMOS */
+/*DETECTOR DE HUMOS */
 uint32_t adcValue;
 volatile int preheating = 0;
 const int PREHEAT_TICKS = 600; // 30 segundos (600 * 50 ms)
 bool gasDetectadoAnag; // salida analogica
 
-/* MOTOR ventilador */
+/*MOTOR ventilador */
 const int FREC_PWM = 1000; /* PWM: 1 kHz */
 int estado_ventilador=0;
 int cuenta_vent;
@@ -91,13 +91,13 @@ bool manual_v;
 #define U_Temp_MAX 28
 #define U_Temp_MIN 24
 
-/* IMAN */
+/*IMAN */
 char puerta_abierta; // estado de puerta
 int persona=0;
 int cuenta_puerta=0;
 int estado_persona=0;
 
-/* LED */
+/*LED */
 int Dutymax = 255;
 int Dutymin = 0;
 int estado_luz=0;
@@ -106,14 +106,14 @@ int cuenta_led=0;
 #define U_LUZ_MIN 50
 #define U_LUZ_MAX 500
 
-/* SENSORES TEMPERATURA Y LUZ */
+/*SENSORES TEMPERATURA Y LUZ */
 int DevID = 0;
 
-/* OPT3001 */
+/*OPT3001 */
 float lux;
 int lux_i;
 
-/* BME280 */
+/*BME280 */
 int returnRslt;
 int g_s32ActualTemp   = 0;
 unsigned int g_u32ActualPress  = 0;
@@ -121,12 +121,12 @@ unsigned int g_u32ActualHumity = 0;
 float T_act;
 bool BME_on = true;
 
-/* inicializacion sensores */
+/*Inicializacion sensores */
 uint8_t Sensor_OK = 0;
 uint8_t Opt_OK, Bme_OK;
 #define BP 2
 
-/* SERVO */
+/*SERVO */
 volatile int Max_pos = 4200; // 3750
 volatile int Min_pos = 1300; // 1875
 int PeriodoPWM;
@@ -137,7 +137,7 @@ int estado_persianas=0;
 int cuenta_per=0;
 int manual_p=0;
 
-/* PANTALLA */
+/*PANTALLA */
 int cont; // contador de mensajes
 char buffer[2][20]; // mensajes a escribir
 
@@ -149,19 +149,13 @@ unsigned long REG_TT[6];
 const int32_t REG_CAL[6] = { CAL_DEFAULTS };
 #define NUM_SSI_DATA 3
 
-/* COMUNICACION / ESTADOS */
+/*COMUNICACION / ESTADOS */
 int lampara = 0;
 int ventilador = 0;
 int pastilla = 0;
 int comida = 0;
 int ayuda = 0;
 int emergencia = 0;
-
-//int estado_pastilla=0;
-//int cuenta_pastilla=0;
-//int estado_comida=0;
-//int cuenta_comida=0;
-
 char num='a';
 
 //------------------------------------------------------------------- SLEEP / ISR
@@ -233,13 +227,13 @@ void DibujaMensaje(void);
 void DibujaRecordatorios(int pastilla, int comida);
 void DibujaBotones(void);
 void DatosPantalla(void);
-/** WEB*/
+/*WEB*/
 void ComandosWeb(void);
 /**
  * @brief Funcion principal.
  *
  * Inicializa modulos y ejecuta bucle periodico.
- * @return no retorna
+ *
  */
 int main(void)
 {
@@ -295,7 +289,8 @@ int main(void)
             puerta_Detectar();
             lee_sensores();
 
-            /** Maquina de estado Luz----------------------------------------------------------------------------------------------------------------*/
+            /** Maquina de estado Luz: Decide el estado de luz despendiendo de los sensores (OPT3001) y las acciones manuales*/
+
             switch(estado_luz){
             case 0:
                 led(0, 0, 0);
@@ -327,53 +322,10 @@ int main(void)
                 break;
             }
 
-//            /** Maquina estado pastilla-----------------------------------------------------------------------*/
-//            switch(estado_pastilla)
-//            {
-//            case 0:
-//                if(pastilla==1){
-//                    MandaMensaje("Toma pastilla");
-//                    estado_pastilla=1;
-//                    TocaNota(PIANO, SOL);
-//                }
-//                break;
-//            case 1:
-//                //                cuenta_pastilla++;
-//                //                if(cuenta_pastilla>20){
-//                //                    TocaNota(SILENCIO, SOL);
-//                //                }
-//                else if(pastilla==0){
-//                    estado_pastilla=0;
-//                    cuenta_pastilla=0;
-//                }
-//                break;
-//            }
-
-            /** Maquina estado comida-----------------------------------------------------------------------*/
-//            switch(estado_comida)
-//            {
-//            case 0://sin pastilla activado
-//                if(comida==1){
-//                    MandaMensaje("Toma comida");
-//                    estado_comida=1;
-//                    TocaNota(TROMPETA, SOL);
-//                }
-//                break;
-//            case 1:
-//                //                cuenta_comida++;
-//                //                if(cuenta_comida>20){
-//                //                    TocaNota( SILENCIO, SOL);
-//                //                }
-//                else if(comida==0){
-//                    //manda comida tomada a web
-//                    estado_comida=0;
-//                    cuenta_comida=0;
-//                }
-//                break;
-//            }
 
 
-            /**Maquina estados ventilador--------------------------------------------------------------------*/
+/**Maquina estados ventilador: Decide el estado del ventilador despendiendo de los sensores (BME280) y las acciones manuales*/
+
             switch(estado_ventilador)
             {
             case 0: //ventilador apagado
@@ -432,7 +384,8 @@ int main(void)
                 break;
             }
 
-            /**maquina estado persianas-----------------------------------------------------------------------*/
+            /**maquina estado persianas: Cambia posicion del servo segun los sensores (OPT3001) y los valores de la web*/
+
 
             switch(estado_persianas){
             case 0: //bajadas
@@ -468,7 +421,8 @@ int main(void)
                 }
                 break;
             }
-            /** Gestion personas-------------------------------------------------------------*/
+            /** Gestion personas: Cuenta la cantidad de personas que hay dentro de la habitación*/
+
             switch (estado_persona){
             case 0: //Puerta cerrada
                 if(puerta_abierta){
@@ -612,7 +566,7 @@ void motor_Configurar_Pines(void)
 
 /**
  * @brief Establece la direccion del motor.
- * @param dir 0 = adelante, 1 = atras
+ * @param dir 0 = horaria, 1 = antihoraria
  */
 void motor_Direccion(uint8_t dir)
 {
@@ -672,7 +626,7 @@ void humo_Precalentar(void)
 /**
  * @brief Lee ADC y pin digital del sensor de humos; actualiza estados.
  *
- * Actualiza: adcValue, gasDetectadoAnag, gasDetected
+ * Actualiza: adcValue que se trata del nivel analogico de gas. Ademas, enciende una alarma si el gas supera un maximo.
  */
 void humo_Detectar(void)
 {
@@ -769,7 +723,7 @@ void sensores_booster_inic(void)
     }
     else{
         UARTprintf("\n--------------------------------------");
-        UARTprintf("\n  Ningun BOOSTERPACK detectado   :-/  ");
+        UARTprintf("\n  Ningun BOOSTERPACK detectado        ");
         UARTprintf("\n              Saliendo");
         UARTprintf("\n--------------------------------------");
     }
@@ -1032,6 +986,9 @@ void DatosPantalla(void)
     if (Boton(HSIZE * 7 / 9 + 10, VSIZE / 4 + 30, HSIZE / 9, HSIZE / 9, 20, ""))
         comida = 0;
 }
+/**
+ * @brief Lee de puerto serial los comandos enviados por la web
+ */
 
 void ComandosWeb(void)
 {

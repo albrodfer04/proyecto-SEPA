@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['led_0',['led',['../_integracion__pantalla__documentado_8c.html#a49993f2f28c23c34d5106c954f5b0dd6',1,'Integracion_pantalla_documentado.c']]],
-  ['led_5finicializar_5fpines_1',['led_Inicializar_Pines',['../_integracion__pantalla__documentado_8c.html#a155a5b13c56d205f4045224707faa9f6',1,'Integracion_pantalla_documentado.c']]],
-  ['lee_5fsensores_2',['lee_sensores',['../_integracion__pantalla__documentado_8c.html#a2706cc95183f7dc0c3c3b0a96bc7fa59',1,'Integracion_pantalla_documentado.c']]]
+  ['inicia_5fpantalla_0',['inicia_pantalla',['../proyecto__final_8c.html#aa77bbc7087c222a1d4efae7277fd2e3d',1,'proyecto_final.c']]],
+  ['inicializacion_5fuart_1',['Inicializacion_UART',['../proyecto__final_8c.html#a6be34deadd6e63b1c519b112838b7caa',1,'proyecto_final.c']]],
+  ['inttimer0_2',['IntTimer0',['../proyecto__final_8c.html#a7121f53a94274f5f8d62d551c8272f5c',1,'proyecto_final.c']]]
 ];

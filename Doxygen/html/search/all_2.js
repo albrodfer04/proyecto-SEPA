@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['inicia_5fpantalla_0',['inicia_pantalla',['../_integracion__pantalla__documentado_8c.html#aa77bbc7087c222a1d4efae7277fd2e3d',1,'Integracion_pantalla_documentado.c']]],
-  ['inicializacion_5fuart_1',['Inicializacion_UART',['../_integracion__pantalla__documentado_8c.html#a6be34deadd6e63b1c519b112838b7caa',1,'Integracion_pantalla_documentado.c']]],
-  ['integracion_5fpantalla_5fdocumentado_2ec_2',['Integracion_pantalla_documentado.c',['../_integracion__pantalla__documentado_8c.html',1,'']]],
-  ['inttimer0_3',['IntTimer0',['../_integracion__pantalla__documentado_8c.html#a7121f53a94274f5f8d62d551c8272f5c',1,'Integracion_pantalla_documentado.c']]]
+  ['humo_5fdetectar_0',['humo_Detectar',['../proyecto__final_8c.html#a7c5807bc5365e226f047aae4eb7cf1e1',1,'proyecto_final.c']]],
+  ['humo_5finicializar_5fpines_1',['humo_Inicializar_Pines',['../proyecto__final_8c.html#a35441a1fc7f64e69730e47575370f613',1,'proyecto_final.c']]],
+  ['humo_5fprecalentar_2',['humo_Precalentar',['../proyecto__final_8c.html#a5de242fd78783f909185758b19e26d94',1,'proyecto_final.c']]]
 ];
